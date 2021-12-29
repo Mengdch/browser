@@ -1,0 +1,229 @@
+package win32
+
+import (
+	"github.com/Mengdch/win"
+	"golang.org/x/sys/windows"
+	"net/url"
+	"github.com/Mengdch/browser/log"
+	"os/exec"
+	"unsafe"
+)
+
+type BlinkView struct {
+	mWnd   win.HWND
+	handle wkeHandle
+	proc   uintptr
+	fnMap  map[int32]func(string) string
+}
+
+func (v *BlinkView) init(parent win.HWND, ua, dev string, jsFunc map[int32]func(string) string) {
+	v.fnMap = jsFunc
+	if mbHandle != nil {
+		v.mWnd = parent
+		v.handle = mbHandle.wkeCreateWebView()
+		mbHandle.wkeSetHandle(v.handle, uintptr(v.mWnd))
+		r := GetBound(parent)
+		mbHandle.wkeResize(v.handle, uint32(r.Width()), uint32(r.Height()))
+		mbHandle.wkeOnLoadUrlBegin(v.handle, v.wkeLoadUrlBeginCallback, 0)
+		mbHandle.wkeOnJsQuery(v.handle, v.onJsQuery, 0)
+		mbHandle.wkeSetNavigationToNewWindowEnable(v.handle, true)
+		mbHandle.wkeOnAlertBox(v.handle, v.onAlert, 0)
+		if len(ua) > 0 {
+			mbHandle.wkeSetUserAgent(v.handle, ua)
+		}
+		if len(dev) > 0 {
+			mbHandle.wkeSetDebugConfig(v.handle, showDevTools, dev)
+		}
+		// 加了就不显示
+		mbHandle.wkeOnPaintUpdated(v.handle, v.paintUpdatedCallback, uintptr(v.mWnd))
+		v.setProc(true)
+	}
+	return
+}
+
+func (v *BlinkView) close() {
+	v.setProc(false)
+	mbHandle.wkeOnPaintUpdated(v.handle, nil, uintptr(v.mWnd))
+	mbHandle.wkeSetHandle(v.handle, 0)
+	mbHandle.wkeDestroyWebView(v.handle)
+}
+func (v *BlinkView) setDownloadCallback(callback func(wke wkeHandle, param uintptr, length uint32, url, mime, disposition uintptr, job wkeNetJob, dataBind uintptr) wkeDownloadOpt) {
+	mbHandle.wkeOnDownload(v.handle, callback, 0)
+	return
+}
+func (v *BlinkView) wkePopupDialogAndDownload(param uintptr, contentLength uint32, url, mime,
+	disposition uintptr, job wkeNetJob, data uintptr, callback *wkeDownloadBind) wkeDownloadOpt {
+	r, _, _ := mbHandle._wkePopupDialogAndDownload.Call(uintptr(v.handle), param, uintptr(contentLength), url, mime,
+		disposition, uintptr(job), data, uintptr(unsafe.Pointer(callback)))
+	return wkeDownloadOpt(r)
+}
+
+func (v *BlinkView) wkeLoadUrlBeginCallback(wke wkeHandle, param, utf8Url uintptr, job wkeNetJob) uintptr {
+	uri := ptrToUtf8(utf8Url)
+	u, err := url.Parse(uri)
+	if err != nil {
+		log.Log(uri+":"+err.Error(), "", "loadUrlBegin.Parse")
+		return 0
+	}
+	switch u.Scheme {
+	case "http", "https", "ws", "wss":
+		return 0
+	default:
+		if exist, err := checkProtocol(u.Scheme); exist {
+			exec.Command("start", uri).Run()
+		} else {
+			log.Log(uri+"("+u.Scheme+"):"+err.Error(), "", "loadUrlBegin.checkProtocol")
+		}
+	}
+	return 0
+}
+func (v *BlinkView) paintUpdatedCallback(wke wkeHandle, param, hdc uintptr, x, y, cx, cy int32) uintptr {
+	style := win.GetWindowLong(v.mWnd, win.GWL_EXSTYLE)
+	if win.WS_EX_LAYERED == (win.WS_EX_LAYERED & style) {
+		var rectDest win.RECT
+		win.GetWindowRect(v.mWnd, &rectDest)
+		rectDest.Offset(-rectDest.Left, -rectDest.Top)
+	} else {
+		rc := win.RECT{x, y, x + cx, y + cy}
+		win.InvalidateRect(v.mWnd, &rc, true)
+	}
+	return 0
+}
+
+func (v *BlinkView) LoadUrl(url string) {
+	mbHandle.wkeLoadURL(v.handle, url)
+}
+func (v *BlinkView) SetOnNewWindow(callback wkeOnCreateViewCallback) {
+	mbHandle.wkeOnCreateView(v.handle, callback, 0)
+}
+
+func (v *BlinkView) OnWndProc(hWnd win.HWND, msg uint32, wParam, lParam uintptr) uintptr {
+	switch msg {
+	case win.WM_ERASEBKGND:
+		return 1
+	case win.WM_SIZE:
+		mbHandle.wkeResize(v.handle, uint32(win.LOWORD(uint32(lParam))), uint32(win.HIWORD(uint32(lParam))))
+	case win.WM_KEYDOWN:
+		if v.keyDown(msg, wParam, lParam, mbHandle.wkeFireKeyDownEvent) {
+			return 0
+		}
+	case win.WM_KEYUP:
+		if v.keyDown(msg, wParam, lParam, mbHandle.wkeFireKeyUpEvent) {
+			return 0
+		}
+	case win.WM_CHAR:
+		if v.keyDown(msg, wParam, lParam, mbHandle.wkeFireKeyPressEvent) {
+			return 0
+		}
+	case win.WM_LBUTTONUP, win.WM_LBUTTONDOWN, win.WM_LBUTTONDBLCLK, win.WM_RBUTTONUP, win.WM_RBUTTONDOWN,
+		win.WM_RBUTTONDBLCLK, win.WM_MBUTTONUP, win.WM_MBUTTONDOWN, win.WM_MBUTTONDBLCLK, win.WM_MOUSEMOVE:
+		if v.mouse(hWnd, msg, wParam, lParam) {
+			return 0
+		}
+	case win.WM_CONTEXTMENU:
+		if v.menu(hWnd, wParam, lParam) {
+			return 0
+		}
+	case win.WM_MOUSEWHEEL:
+		if v.mouseWheel(hWnd, wParam, lParam) {
+			return 0
+		}
+	case win.WM_SETFOCUS:
+		mbHandle.wkeSetFocus(v.handle)
+		return 0
+	case win.WM_KILLFOCUS:
+		mbHandle.wkeKillFocus(v.handle)
+		return 0
+	case win.WM_PAINT:
+		if mbHandle.wkeFireWindowsMessage(v.handle, hWnd, int32(msg), int32(wParam), int32(lParam)) {
+			return 0
+		}
+	case win.WM_SETCURSOR, win.WM_IME_STARTCOMPOSITION:
+		if mbHandle.wkeFireWindowsMessage(v.handle, hWnd, int32(msg), int32(0), int32(0)) {
+			return 0
+		}
+	case win.WM_INPUTLANGCHANGE:
+		return win.DefWindowProc(hWnd, msg, wParam, lParam)
+	}
+	return win.CallWindowProc(v.proc, hWnd, msg, wParam, lParam)
+}
+func (v *BlinkView) menu(hWnd win.HWND, wParam, lParam uintptr) bool {
+	pt := getPoint(hWnd, lParam)
+
+	flags := getFlags(wParam)
+	return mbHandle.wkeFireContextMenuEvent(v.handle, pt.X, pt.Y, flags)
+}
+func (v *BlinkView) mouseWheel(hWnd win.HWND, wParam, lParam uintptr) bool {
+	pt := getPoint(hWnd, lParam)
+	flags := getFlags(wParam)
+	return mbHandle.wkeFireMouseWheelEvent(v.handle, pt.X, pt.Y, int32(win.HIWORD(uint32(wParam))), flags)
+}
+
+func getPoint(hWnd win.HWND, lParam uintptr) win.POINT {
+	var pt win.POINT
+	pt.X = int32(win.LOWORD(uint32(lParam)))
+	pt.Y = int32(win.HIWORD(uint32(lParam)))
+	win.ScreenToClient(hWnd, &pt)
+	return pt
+}
+func (v *BlinkView) mouse(hWnd win.HWND, msg uint32, wParam, lParam uintptr) bool {
+	if msg == win.WM_LBUTTONDOWN || msg == win.WM_MBUTTONDOWN || msg == win.WM_RBUTTONDOWN {
+		if win.GetFocus() != hWnd {
+			win.SetFocus(hWnd)
+		}
+
+		win.SetCapture(hWnd)
+	} else if msg == win.WM_LBUTTONUP || msg == win.WM_MBUTTONUP || msg == win.WM_RBUTTONUP {
+		win.ReleaseCapture()
+	}
+
+	x := win.LOWORD(uint32(lParam))
+	y := win.HIWORD(uint32(lParam))
+
+	flags := getFlags(wParam)
+	return mbHandle.wkeFireMouseEvent(v.handle, int32(msg), int32(x), int32(y), flags)
+}
+
+func getFlags(wParam uintptr) int32 {
+	var flags int32 = 0
+	if (wParam & win.MK_CONTROL) != 0 {
+		flags |= WKE_CONTROL
+	}
+
+	if (wParam & win.MK_SHIFT) != 0 {
+		flags |= WKE_SHIFT
+	}
+
+	if (wParam & win.MK_LBUTTON) != 0 {
+		flags |= WKE_LBUTTON
+	}
+
+	if (wParam & win.MK_MBUTTON) != 0 {
+		flags |= WKE_MBUTTON
+	}
+
+	if (wParam & win.MK_RBUTTON) != 0 {
+		flags |= WKE_RBUTTON
+	}
+	return flags
+}
+func (v *BlinkView) keyDown(msg uint32, wParam, lParam uintptr, fun func(wkeHandle, uint32, uint32, bool) bool) bool {
+	var flags uint32 = 0
+	lp := int32(lParam)
+	if lp>>16&KF_REPEAT != 0 {
+		flags |= WKE_REPEAT
+	}
+	if lp>>16&KF_EXTENDED != 0 {
+		flags |= WKE_EXTENDED
+	}
+	isSys := false
+	if msg == win.WM_SYSKEYDOWN {
+		isSys = true
+	}
+	return fun(v.handle, uint32(wParam), flags, isSys)
+}
+func (v *BlinkView) onAlert(wke wkeHandle, param uintptr, msg uintptr) uintptr {
+	content := ptrToUtf8(msg)
+	win.MessageBox(v.mWnd, windows.StringToUTF16Ptr(content), windows.StringToUTF16Ptr("警告"), 0)
+	return 0
+}
