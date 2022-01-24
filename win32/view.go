@@ -1,10 +1,10 @@
 package win32
 
 import (
+	"github.com/Mengdch/browser/log"
 	"github.com/Mengdch/win"
 	"golang.org/x/sys/windows"
 	"net/url"
-	"github.com/Mengdch/browser/log"
 	"os/exec"
 	"unsafe"
 )
@@ -210,10 +210,10 @@ func getFlags(wParam uintptr) int32 {
 func (v *BlinkView) keyDown(msg uint32, wParam, lParam uintptr, fun func(wkeHandle, uint32, uint32, bool) bool) bool {
 	var flags uint32 = 0
 	lp := int32(lParam)
-	if lp>>16&KF_REPEAT != 0 {
+	if lp>>16&win.KF_REPEAT != 0 {
 		flags |= WKE_REPEAT
 	}
-	if lp>>16&KF_EXTENDED != 0 {
+	if lp>>16&win.KF_EXTENDED != 0 {
 		flags |= WKE_EXTENDED
 	}
 	isSys := false

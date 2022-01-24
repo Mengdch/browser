@@ -8,8 +8,6 @@ type (
 )
 
 const (
-	KF_REPEAT   = 16384
-	KF_EXTENDED = 256
 
 	WKE_LBUTTON  = 0x01
 	WKE_RBUTTON  = 0x02
@@ -23,16 +21,16 @@ const (
 type debugType string
 
 const (
-	showDevTools           debugType = "showDevTools" // 开启开发者工具，此时param要填写开发者工具的资源路径，如file:///c:/miniblink-release/front_end/inspector.html，注意 debugType = ""//路径中不能有中文，并且必须为完整路径。
-	wakeMinInterval        debugType = "wakeMinInterval" // 设置帧率，默认值是10，值越大帧率越低。
-	drawMinInterval        debugType = "drawMinInterval" // 设置帧率，默认值是3，值越大帧率越低。
-	antiAlias              debugType = "antiAlias" // 设置抗锯齿渲染，param必须设置为“1”。
-	minimumFontSize        debugType = "minimumFontSize" // 最小字体。
+	showDevTools           debugType = "showDevTools"           // 开启开发者工具，此时param要填写开发者工具的资源路径，如file:///c:/miniblink-release/front_end/inspector.html，注意 debugType = ""//路径中不能有中文，并且必须为完整路径。
+	wakeMinInterval        debugType = "wakeMinInterval"        // 设置帧率，默认值是10，值越大帧率越低。
+	drawMinInterval        debugType = "drawMinInterval"        // 设置帧率，默认值是3，值越大帧率越低。
+	antiAlias              debugType = "antiAlias"              // 设置抗锯齿渲染，param必须设置为“1”。
+	minimumFontSize        debugType = "minimumFontSize"        // 最小字体。
 	minimumLogicalFontSize debugType = "minimumLogicalFontSize" // 最小逻辑字体。
-	defaultFontSize        debugType = "defaultFontSize" // 默认字号。
-	defaultFixedFontSize   debugType = "defaultFixedFontSize" // 默认Fixed字号。
-	imageEnable            debugType = "imageEnable" // 是否打开无图模式，param为“0”表示开启无图模式。
-	jsEnable               debugType = "jsEnable" // 是否禁用js，param为“0”表示禁用。
+	defaultFontSize        debugType = "defaultFontSize"        // 默认字号。
+	defaultFixedFontSize   debugType = "defaultFixedFontSize"   // 默认Fixed字号。
+	imageEnable            debugType = "imageEnable"            // 是否打开无图模式，param为“0”表示开启无图模式。
+	jsEnable               debugType = "jsEnable"               // 是否禁用js，param为“0”表示禁用。
 
 )
 
