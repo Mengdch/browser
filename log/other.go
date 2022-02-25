@@ -33,18 +33,18 @@ func download(download, path string) error {
 func Upload(filePath string) string {
 	sw, err := goseaweedfs.NewSeaweed(mHost, []string{upHost}, 160000, &http.Client{Timeout: 30 * time.Second})
 	if err != nil {
-		Log(err.Error(), "", "upload.AssignFileId")
+		Log("upload.AssignFileId", "", err.Error())
 		return ""
 	}
 	if len(sw.Filers()) > 0 {
 		a, e := sw.AssignFileId("", "")
 		if e != nil {
-			Log(e.Error(), "", "upload.AssignFileId")
+			Log("upload.AssignFileId", "", e.Error())
 			return ""
 		}
 		r, e := sw.Filers()[0].UploadFile(filePath, a.FileID, "", "")
 		if e != nil {
-			Log(filePath+"("+a.FileID+"):"+e.Error(), "", "upload.Filer.UploadFile")
+			Log("upload.Filer.UploadFile"+filePath+"("+a.FileID+"):", "", e.Error())
 			return ""
 		}
 		if len(r.Name) == 0 {
@@ -54,7 +54,7 @@ func Upload(filePath string) string {
 	}
 	_, fp, err := sw.UploadFile(filePath, "", "")
 	if err != nil {
-		Log(filePath+":"+err.Error(), "", "upload.UploadFile")
+		Log("upload.UploadFile"+filePath+":", "", err.Error())
 		return ""
 	}
 	return upHost + "/" + fp.FileID

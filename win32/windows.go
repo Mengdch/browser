@@ -13,18 +13,22 @@ import (
 )
 
 const (
-	className  = "thublink_class"
-	windowName = "thublink_window"
+	className      = "thublink_class"
+	windowName     = "thublink_window"
+	classViewName  = "thublink_view_class"
+	windowViewName = "thublink_view_window"
 )
 
 var (
-	classNamePtr  *uint16
-	windowNamePtr *uint16
-	hInst         win.HINSTANCE
-	procMap       map[win.HWND]uintptr
-	mbHandle      *Thublink
-	iconHandle    win.HANDLE
-	urls          []string
+	classNamePtr      *uint16
+	windowNamePtr     *uint16
+	classViewNamePtr  *uint16
+	windowViewNamePtr *uint16
+	hInst             win.HINSTANCE
+	procMap           map[win.HWND]uintptr
+	mbHandle          *Thublink
+	iconHandle        win.HANDLE
+	urls              []string
 )
 
 type SaveCallback func(url, path string)
@@ -43,14 +47,34 @@ func init() {
 		fmt.Println(err)
 		return
 	}
+	classViewNamePtr, err = syscall.UTF16PtrFromString(classViewName)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	windowViewNamePtr, err = syscall.UTF16PtrFromString(windowViewName)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	hInst = win.GetModuleHandle(nil)
 	wndClass := win.WNDCLASSEX{
-		Style:         win.CS_DBLCLKS,
+		Style:         win.CS_HREDRAW | win.CS_VREDRAW,
 		LpfnWndProc:   syscall.NewCallbackCDecl(classMsgProc),
 		HInstance:     hInst,
 		LpszClassName: classNamePtr,
 		HCursor:       win.LoadCursor(0, win.MAKEINTRESOURCE(win.IDC_ARROW)),
-		HbrBackground: win.GetSysColorBrush(win.COLOR_WINDOW),
+		HbrBackground: win.GetSysColorBrush(win.COLOR_WINDOW + 1),
+	}
+	wndClass.CbSize = uint32(unsafe.Sizeof(wndClass))
+	win.RegisterClassEx(&wndClass)
+	wndClass = win.WNDCLASSEX{
+		Style:         win.CS_DBLCLKS,
+		LpfnWndProc:   syscall.NewCallbackCDecl(classMsgProc),
+		HInstance:     hInst,
+		LpszClassName: classViewNamePtr,
+		HbrBackground: win.GetSysColorBrush(win.COLOR_WINDOW + 1),
+		HCursor:       win.LoadCursor(0, win.MAKEINTRESOURCE(win.IDC_ARROW)),
 	}
 	wndClass.CbSize = uint32(unsafe.Sizeof(wndClass))
 	win.RegisterClassEx(&wndClass)
@@ -63,6 +87,10 @@ func classMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam uintptr) uin
 	return win.DefWindowProc(hWnd, msg, wParam, lParam)
 }
 func newWindow(exStyle, style uint32, parent win.HWND, width, height int32, proc func(hWnd win.HWND, msg uint32, wParam, lParam uintptr) uintptr) win.HWND {
+	return newClassWindow(exStyle, style, parent, width, height, classNamePtr, windowNamePtr, proc)
+}
+func newClassWindow(exStyle, style uint32, parent win.HWND, width, height int32, className, windowName *uint16,
+	proc func(hWnd win.HWND, msg uint32, wParam, lParam uintptr) uintptr) win.HWND {
 	var x, y int32
 	if parent == 0 && style&win.WS_MAXIMIZE == 0 { // 居中
 		sw := win.GetSystemMetrics(win.SM_CXFULLSCREEN)
@@ -70,7 +98,7 @@ func newWindow(exStyle, style uint32, parent win.HWND, width, height int32, proc
 		x = (sw - width) / 2
 		y = (sh - height) / 2
 	}
-	wnd := win.CreateWindowEx(exStyle, classNamePtr, windowNamePtr, style, x, y, width, height,
+	wnd := win.CreateWindowEx(exStyle, className, windowName, style, x, y, width, height,
 		parent, 0, hInst, unsafe.Pointer(nil))
 	if wnd != 0 {
 		procMap[wnd] = syscall.NewCallbackCDecl(proc)
@@ -150,10 +178,16 @@ func (fp FormProfile) newBlinkWindow(set func(uintptr)) {
 		set(uintptr(w.hWnd))
 	}
 	v := BlinkView{}
-	v.init(w.child, fp.UserAgent, fp.devPath, fp.jsFunction)
+	var r win.RECT
+	win.GetClientRect(w.hWnd, &r)
+	v.init(fp.UserAgent, fp.devPath, fp.jsFunction)
 	v.SetOnNewWindow(w.onCreateView)
 	v.setDownloadCallback(w.wkeOnDownloadCallback)
+	w.child = newClassWindow(0, win.WS_CHILD|win.WS_VISIBLE|win.WS_CLIPSIBLINGS|win.WS_CLIPCHILDREN, w.hWnd, r.Width(), r.Height(), classViewNamePtr, windowViewNamePtr, v.OnWndProc)
+	v.setHWnd(w.child)
+	v.resize(r.Width(), r.Height(), true)
 	v.LoadUrl(fp.index)
+	mbHandle.wkeOnLoadUrlBegin(v.handle, v.wkeLoadUrlBeginCallback, 0)
 	urls = append(urls, fp.index)
 	w.view = &v
 }
@@ -189,29 +223,29 @@ type window struct {
 func (w *window) init() {
 	w.down = make(map[string]*downInfo)
 	w.bind = make(map[string]*wkeDownloadBind)
-	var style uint32 = win.WS_OVERLAPPEDWINDOW | win.WS_VISIBLE | win.WS_CLIPSIBLINGS | win.WS_CLIPCHILDREN
-	if !w.profile.Ib {
-		style -= win.WS_MINIMIZEBOX
-	}
-	if !w.profile.Mb {
-		style -= win.WS_MAXIMIZEBOX
-	}
-	if w.profile.Max {
-		style |= win.WS_MAXIMIZE
-	}
-	var exStyle uint32 = win.WS_EX_LEFT | win.WS_EX_LTRREADING | win.WS_EX_RIGHTSCROLLBAR | win.WS_EX_ACCEPTFILES | win.WS_EX_WINDOWEDGE
-	w.hWnd = newWindow(exStyle, style, 0, int32(w.profile.Width), int32(w.profile.Height), w.windowMsgProc)
+	w.hWnd = newWindow(0, w.style(), 0, int32(w.profile.Width), int32(w.profile.Height), w.windowMsgProc)
 	if w.hWnd == 0 {
 		return
 	}
 	if iconHandle != 0 {
 		win.SendMessage(w.hWnd, win.WM_SETICON, 1, uintptr(iconHandle))
 	}
-	var r win.RECT
-	win.GetClientRect(w.hWnd, &r)
-	w.child = newWindow(0, win.WS_CHILD|win.WS_VISIBLE, w.hWnd, r.Width(), r.Height(), win.DefWindowProc)
 	win.SetWindowText(w.hWnd, w.profile.Title)
 	win.ShowWindow(w.hWnd, win.SW_SHOW)
+}
+
+func (w *window) style() uint32 {
+	var style uint32 = win.WS_OVERLAPPEDWINDOW | win.WS_VISIBLE | win.WS_CLIPSIBLINGS | win.WS_CLIPCHILDREN
+	if !w.profile.Ib {
+		style ^= win.WS_MINIMIZEBOX
+	}
+	if !w.profile.Mb {
+		style ^= win.WS_MAXIMIZEBOX
+	}
+	if w.profile.Max {
+		style |= win.WS_MAXIMIZE
+	}
+	return style
 }
 func (w *window) roundRect() { // 有效果，但是很丑，还有bug
 	/*
@@ -233,10 +267,16 @@ func (w *window) windowMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam
 		win.GetClientRect(hWnd, &r)
 		win.MoveWindow(w.child, r.Left, r.Top, r.Width(), r.Height(), false)
 	case win.WM_SIZE:
-		var r win.RECT
-		win.GetClientRect(hWnd, &r)
-		win.SendMessage(w.child, msg, 0, uintptr(win.MAKELONG(uint16(r.Width()), uint16(r.Height()))))
+		if w.child > 0 && w.view != nil {
+			var r win.RECT
+			win.GetClientRect(hWnd, &r)
+			win.MoveWindow(w.child, r.Left, r.Top, r.Width(), r.Height(), true)
+			w.view.resize(r.Width(), r.Height(), false)
+		}
 	case win.WM_CLOSE:
+		if w.view == nil {
+			break
+		}
 		w.view.close()
 		if w.profile.main {
 			win.PostQuitMessage(0)
@@ -282,12 +322,16 @@ func (w *window) wkeOnDownloadCallback(wke wkeHandle, param uintptr, length uint
 func (w *window) onCreateView(wke wkeHandle, param uintptr, naviType wkeNavigationType, url, feature uintptr) uintptr {
 	a := ptrToUtf8(url)
 	if Debug() {
-		fmt.Println(a)
+		fmt.Println("onCreateView", a)
 	}
 	urls = append(urls, a)
 	if v, e := w.profile.subs[a]; e {
 		v.newBlinkWindow(nil)
 	} else {
+		o := operateUri(a)
+		if o == 1 {
+			return 0
+		}
 		n := w.profile
 		n.index = a
 		n.main = false

@@ -1,7 +1,6 @@
 package win32
 
 import (
-	"github.com/Mengdch/browser/log"
 	"github.com/Mengdch/win"
 	"golang.org/x/sys/windows"
 	"net/url"
@@ -10,39 +9,66 @@ import (
 )
 
 type BlinkView struct {
-	mWnd   win.HWND
-	handle wkeHandle
-	proc   uintptr
-	fnMap  map[int32]func(string) string
+	mWnd          win.HWND
+	handle        wkeHandle
+	proc          uintptr
+	fnMap         map[int32]func(string) string
+	mDC           win.HDC
+	width, height int32
+	pixels        unsafe.Pointer
+	mBitmap       win.HBITMAP
+	url           string
 }
 
-func (v *BlinkView) init(parent win.HWND, ua, dev string, jsFunc map[int32]func(string) string) {
+func (v *BlinkView) createBitmap() {
+	var bi win.BITMAPINFOHEADER
+	bi.BiSize = 40 // (win.BITMAPINFOHEADER)
+	bi.BiWidth = v.width
+	bi.BiHeight = v.height
+	bi.BiPlanes = 1
+	bi.BiBitCount = 32
+	bi.BiCompression = win.BI_RGB
+
+	hBmp := win.CreateDIBSection(0, &bi, win.DIB_RGB_COLORS, &v.pixels, 0, 0)
+	win.SelectObject(v.mDC, win.HGDIOBJ(hBmp))
+	if v.mBitmap != 0 {
+		win.DeleteObject(win.HGDIOBJ(v.mBitmap))
+	}
+
+	v.mBitmap = hBmp
+}
+
+func (v *BlinkView) init(ua, dev string, jsFunc map[int32]func(string) string) {
 	v.fnMap = jsFunc
 	if mbHandle != nil {
-		v.mWnd = parent
 		v.handle = mbHandle.wkeCreateWebView()
-		mbHandle.wkeSetHandle(v.handle, uintptr(v.mWnd))
-		r := GetBound(parent)
-		mbHandle.wkeResize(v.handle, uint32(r.Width()), uint32(r.Height()))
-		mbHandle.wkeOnLoadUrlBegin(v.handle, v.wkeLoadUrlBeginCallback, 0)
+		mbHandle.wkeSetTransparent(v.handle, false)
 		mbHandle.wkeOnJsQuery(v.handle, v.onJsQuery, 0)
 		mbHandle.wkeSetNavigationToNewWindowEnable(v.handle, true)
 		mbHandle.wkeOnAlertBox(v.handle, v.onAlert, 0)
+		mbHandle.wkeOnPaintUpdated(v.handle, v.paintUpdatedCallback, 0)
 		if len(ua) > 0 {
 			mbHandle.wkeSetUserAgent(v.handle, ua)
 		}
 		if len(dev) > 0 {
 			mbHandle.wkeSetDebugConfig(v.handle, showDevTools, dev)
 		}
-		// 加了就不显示
-		mbHandle.wkeOnPaintUpdated(v.handle, v.paintUpdatedCallback, uintptr(v.mWnd))
-		v.setProc(true)
 	}
 	return
 }
 
+func (v *BlinkView) setHWnd(parent win.HWND) {
+	v.mWnd = parent
+	v.mDC = win.CreateCompatibleDC(0)
+	mbHandle.wkeSetHandle(v.handle, uintptr(v.mWnd))
+}
 func (v *BlinkView) close() {
-	v.setProc(false)
+	if v.mDC != 0 {
+		win.DeleteDC(v.mDC)
+	}
+	if v.mBitmap != 0 {
+		win.DeleteObject(win.HGDIOBJ(v.mBitmap))
+	}
 	mbHandle.wkeOnPaintUpdated(v.handle, nil, uintptr(v.mWnd))
 	mbHandle.wkeSetHandle(v.handle, 0)
 	mbHandle.wkeDestroyWebView(v.handle)
@@ -60,9 +86,17 @@ func (v *BlinkView) wkePopupDialogAndDownload(param uintptr, contentLength uint3
 
 func (v *BlinkView) wkeLoadUrlBeginCallback(wke wkeHandle, param, utf8Url uintptr, job wkeNetJob) uintptr {
 	uri := ptrToUtf8(utf8Url)
+	if len(v.url) > 0 {
+		go logRecord("loadUrlBegin:"+v.url, "")
+		v.url = ""
+	}
+	return operateUri(uri)
+}
+
+func operateUri(uri string) uintptr {
 	u, err := url.Parse(uri)
 	if err != nil {
-		log.Log(uri+":"+err.Error(), "", "loadUrlBegin.Parse")
+		go logRecord("operateUri.Parse:"+uri, err.Error())
 		return 0
 	}
 	switch u.Scheme {
@@ -70,27 +104,31 @@ func (v *BlinkView) wkeLoadUrlBeginCallback(wke wkeHandle, param, utf8Url uintpt
 		return 0
 	default:
 		if exist, err := checkProtocol(u.Scheme); exist {
-			exec.Command("start", uri).Run()
-		} else {
-			log.Log(uri+"("+u.Scheme+"):"+err.Error(), "", "loadUrlBegin.checkProtocol")
+			go exec.Command("start", uri).Run()
+			return 1
+		} else if err != nil {
+			go logRecord("operateUri.checkProtocol:"+uri+"("+u.Scheme+"):", err.Error())
 		}
 	}
 	return 0
 }
 func (v *BlinkView) paintUpdatedCallback(wke wkeHandle, param, hdc uintptr, x, y, cx, cy int32) uintptr {
-	style := win.GetWindowLong(v.mWnd, win.GWL_EXSTYLE)
-	if win.WS_EX_LAYERED == (win.WS_EX_LAYERED & style) {
-		var rectDest win.RECT
-		win.GetWindowRect(v.mWnd, &rectDest)
-		rectDest.Offset(-rectDest.Left, -rectDest.Top)
-	} else {
-		rc := win.RECT{x, y, x + cx, y + cy}
-		win.InvalidateRect(v.mWnd, &rc, true)
+	if v.pixels == nil {
+		if v.width != cx || v.height != cy {
+			return 0
+		}
+		v.createBitmap()
 	}
+
+	hScreenDC := win.GetDC(v.mWnd)
+	win.BitBlt(v.mDC, x, y, v.width, v.height, win.HDC(hdc), x, y, win.SRCCOPY)
+	win.BitBlt(hScreenDC, x, y, v.width, v.height, v.mDC, x, y, win.SRCCOPY)
+	win.ReleaseDC(v.mWnd, hScreenDC)
 	return 0
 }
 
 func (v *BlinkView) LoadUrl(url string) {
+	v.url = url
 	mbHandle.wkeLoadURL(v.handle, url)
 }
 func (v *BlinkView) SetOnNewWindow(callback wkeOnCreateViewCallback) {
@@ -102,7 +140,8 @@ func (v *BlinkView) OnWndProc(hWnd win.HWND, msg uint32, wParam, lParam uintptr)
 	case win.WM_ERASEBKGND:
 		return 1
 	case win.WM_SIZE:
-		mbHandle.wkeResize(v.handle, uint32(win.LOWORD(uint32(lParam))), uint32(win.HIWORD(uint32(lParam))))
+		w, h := int32(win.LOWORD(uint32(lParam))), int32(win.HIWORD(uint32(lParam)))
+		v.resize(w, h, true)
 	case win.WM_KEYDOWN:
 		if v.keyDown(msg, wParam, lParam, mbHandle.wkeFireKeyDownEvent) {
 			return 0
@@ -135,9 +174,11 @@ func (v *BlinkView) OnWndProc(hWnd win.HWND, msg uint32, wParam, lParam uintptr)
 		mbHandle.wkeKillFocus(v.handle)
 		return 0
 	case win.WM_PAINT:
-		if mbHandle.wkeFireWindowsMessage(v.handle, hWnd, int32(msg), int32(wParam), int32(lParam)) {
-			return 0
-		}
+		var paintInfo win.PAINTSTRUCT
+		win.BeginPaint(hWnd, &paintInfo)
+		win.BitBlt(paintInfo.Hdc, 0, 0, v.width, v.height, v.mDC, 0, 0, win.SRCCOPY)
+		win.EndPaint(hWnd, &paintInfo)
+		return 0
 	case win.WM_SETCURSOR, win.WM_IME_STARTCOMPOSITION:
 		if mbHandle.wkeFireWindowsMessage(v.handle, hWnd, int32(msg), int32(0), int32(0)) {
 			return 0
@@ -145,7 +186,7 @@ func (v *BlinkView) OnWndProc(hWnd win.HWND, msg uint32, wParam, lParam uintptr)
 	case win.WM_INPUTLANGCHANGE:
 		return win.DefWindowProc(hWnd, msg, wParam, lParam)
 	}
-	return win.CallWindowProc(v.proc, hWnd, msg, wParam, lParam)
+	return win.DefWindowProc(hWnd, msg, wParam, lParam)
 }
 func (v *BlinkView) menu(hWnd win.HWND, wParam, lParam uintptr) bool {
 	pt := getPoint(hWnd, lParam)
@@ -206,6 +247,21 @@ func getFlags(wParam uintptr) int32 {
 		flags |= WKE_RBUTTON
 	}
 	return flags
+}
+func (v *BlinkView) resize(w, h int32, set bool) {
+	if v.handle > 0 {
+		mbHandle.wkeResize(v.handle, uint32(w), uint32(h))
+	}
+	if !set {
+		return
+	}
+	if v.width == w && v.height == h {
+		return
+	}
+
+	v.width = w
+	v.height = h
+	v.pixels = nil
 }
 func (v *BlinkView) keyDown(msg uint32, wParam, lParam uintptr, fun func(wkeHandle, uint32, uint32, bool) bool) bool {
 	var flags uint32 = 0

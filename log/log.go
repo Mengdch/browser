@@ -3,12 +3,21 @@ package log
 import (
 	"io/ioutil"
 	"net/http"
+	"runtime"
 )
 
 var userAgent string
 
 func Log(value, ua, error string) {
 }
+func CatchPanic(fun string) {
+	if err := recover(); err != nil {
+		buf := make([]byte, 8192)
+		buf = buf[:runtime.Stack(buf, false)]
+		Log(fun+":"+string(buf), "", "panic")
+	}
+}
+
 func GetBody(req *http.Request) []byte {
 	client := &http.Client{}
 	response, err := client.Do(req)

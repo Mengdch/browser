@@ -77,20 +77,20 @@ type exceptionInfo struct {
 
 func onException(param uintptr) uintptr {
 	if miniDumpWriteDump == nil {
-		log.Log("miniDumpWriteDump nil", "", "onException")
+		logRecord("onException", "miniDumpWriteDump nil")
 		return 0
 	}
 	pHandle := windows.CurrentProcess()
 	name := "thublink" + strconv.FormatInt(time.Now().Unix(), 32) + ".dmp"
 	fromString, err := syscall.UTF16PtrFromString(name)
 	if err != nil {
-		log.Log(name+":"+err.Error(), "", "onException.UTF16PtrFromString")
+		logRecord("onException.UTF16PtrFromString:"+name, err.Error())
 		return 0
 	}
 	var sa windows.SecurityAttributes
 	fHandle, err := windows.CreateFile(fromString, GENERIC_WRITE, FILE_SHARE_WRITE, &sa, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0)
 	if err != nil {
-		log.Log(name+":"+err.Error(), "", "onException.CreateFile")
+		logRecord("onException.CreateFile:"+name, err.Error())
 		return 0
 	}
 	var info exceptionInfo
@@ -99,16 +99,25 @@ func onException(param uintptr) uintptr {
 	success, _, err := miniDumpWriteDump.Call(uintptr(pHandle), uintptr(pid), uintptr(fHandle), MiniDumpNormal, uintptr(unsafe.Pointer(&info)), 0, 0)
 	windows.CloseHandle(fHandle)
 	if success != 1 {
-		log.Log(err.Error(), "", "onException.miniDumpWriteDump")
+		logRecord("onException.miniDumpWriteDump", err.Error())
 		return 0
 	}
 	url := log.Upload(name)
 	if len(url) > 0 {
-		log.Log(TypeTools.OutJson(map[string]interface{}{"dmp": url, "url": urls}), "", "dmpHandle")
+		logRecord(TypeTools.OutJson(map[string]interface{}{"dmp": url, "url": urls}), "dmpHandle")
 	}
 	return 0
 }
 
+func GetFocus() win.HWND {
+	hForeWnd := win.GetForegroundWindow()
+	dwForeID := win.GetWindowThreadProcessId(hForeWnd, nil)
+	dwCurID := win.GetCurrentThreadId()
+	win.AttachThreadInput(int32(dwForeID), int32(dwCurID), true)
+	wnd := win.GetFocus()
+	win.AttachThreadInput(int32(dwForeID), int32(dwCurID), false)
+	return wnd
+}
 func SetTop(hWnd win.HWND) {
 	hForeWnd := win.GetForegroundWindow()
 	dwForeID := win.GetWindowThreadProcessId(hForeWnd, nil)
@@ -119,4 +128,8 @@ func SetTop(hWnd win.HWND) {
 	win.SetWindowPos(hWnd, win.HWND_NOTOPMOST, 0, 0, 0, 0, win.SWP_NOSIZE|win.SWP_NOMOVE)
 	win.SetForegroundWindow(hWnd)
 	win.AttachThreadInput(int32(dwCurID), int32(dwForeID), false)
+}
+func logRecord(value, error string) {
+	defer log.CatchPanic("logRecord")
+	log.Log(value, "", error)
 }

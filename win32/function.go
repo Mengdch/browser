@@ -63,6 +63,7 @@ type Thublink struct {
 	_wkeSetDebugConfig                 *windows.LazyProc
 	_wkePopupDialogAndDownload         *windows.LazyProc
 	_wkeGetLockedViewDC                *windows.LazyProc
+	_wkeRunMessageLoop                 *windows.LazyProc
 }
 
 const (
@@ -123,6 +124,7 @@ func (t *Thublink) Init() *Thublink {
 	t._wkeOnJsQuery = lib.NewProc("mbOnJsQuery")
 	t._wkeResponseQuery = lib.NewProc("mbResponseQuery")
 	t._wkeGetLockedViewDC = lib.NewProc("mbGetLockedViewDC")
+	t._wkeRunMessageLoop = lib.NewProc("mbRunMessageLoop")
 	var set mbSettings
 	set.mask = MB_ENABLE_NODEJS
 	r, _, err := t._wkeInitialize.Call(uintptr(unsafe.Pointer(&set)))
@@ -426,6 +428,9 @@ func (t *Thublink) wkeGetHostHWND() win.HWND {
 func (t *Thublink) wkeGetLockedViewDC(handle wkeHandle) win.HDC {
 	r, _, _ := t._wkeGetLockedViewDC.Call(uintptr(handle))
 	return win.HDC(r)
+}
+func (t *Thublink) wkeRunMessageLoop()  {
+	t._wkeRunMessageLoop.Call()
 }
 func strToCharPtr(str string) uintptr {
 	buf := []byte(str)

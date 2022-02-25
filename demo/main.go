@@ -17,7 +17,7 @@ import (
 var userAgent string
 
 func main() {
-	defer browser.CatchPanic("main")
+	defer log.CatchPanic("main")
 	url := flag.String("url", "https://www.baidu.com", "链接")
 	title := flag.String("title", "aa", "标题")
 	ico := flag.String("icon", "", "图标")

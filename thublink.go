@@ -3,8 +3,6 @@ package browser
 import (
 	"github.com/Mengdch/browser/log"
 	"github.com/Mengdch/browser/win32"
-	"runtime"
-	"time"
 )
 
 func Start(url, title, ico, ua, devPath string, max bool, width, height int) error {
@@ -22,7 +20,7 @@ func StartFull(url, title, ico, ua, devPath string, max, mb, ib bool, width, hei
 		catchSet = func(u uintptr) {
 			if set != nil {
 				go func() {
-					defer CatchPanic("set")
+					defer log.CatchPanic("set")
 					set(u)
 				}()
 			}
@@ -30,20 +28,5 @@ func StartFull(url, title, ico, ua, devPath string, max, mb, ib bool, width, hei
 	} else {
 		catchSet = nil
 	}
-	if len(url) > 0 {
-		go logThread(url, title, ua)
-	}
 	return win32.StartBlinkMain(url, title, ico, ua, devPath, max, mb, ib, width, height, jsFunc, forms, catchSet, save, finish)
-}
-func logThread(uri string, title string, ua string) {
-	defer CatchPanic("log")
-	time.Sleep(time.Minute)
-	log.Log(title+":"+uri, ua, "")
-}
-func CatchPanic(fun string) {
-	if err := recover(); err != nil {
-		buf := make([]byte, 8192)
-		buf = buf[:runtime.Stack(buf, false)]
-		log.Log(fun+":"+string(buf), "", "panic")
-	}
 }

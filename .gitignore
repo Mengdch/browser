@@ -1,0 +1,7 @@
+
+*.cmd
+*.exe
+*.dll
+data
+*.dat
+LocalStorage
