@@ -28,5 +28,6 @@ func StartFull(url, title, ico, ua, devPath string, max, mb, ib bool, width, hei
 	} else {
 		catchSet = nil
 	}
+	log.SetUA(ua)
 	return win32.StartBlinkMain(url, title, ico, ua, devPath, max, mb, ib, width, height, jsFunc, forms, catchSet, save, finish)
 }

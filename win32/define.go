@@ -8,7 +8,6 @@ type (
 )
 
 const (
-
 	WKE_LBUTTON  = 0x01
 	WKE_RBUTTON  = 0x02
 	WKE_SHIFT    = 0x04
@@ -32,6 +31,14 @@ const (
 	imageEnable            debugType = "imageEnable"            // 是否打开无图模式，param为“0”表示开启无图模式。
 	jsEnable               debugType = "jsEnable"               // 是否禁用js，param为“0”表示禁用。
 
+)
+
+type WindowType int
+
+const (
+	WKE_WINDOW_TYPE_POPUP WindowType = iota
+	WKE_WINDOW_TYPE_TRANSPARENT
+	WKE_WINDOW_TYPE_CONTROL
 )
 
 type ProxyType int

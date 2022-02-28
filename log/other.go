@@ -27,24 +27,24 @@ func download(download, path string) error {
 
 	body := GetBody(req)
 	err = fileFunc.WriteFileByte(path, body)
-	Log("download:"+download, "", "")
+	Log("download:"+download, "")
 	return err
 }
 func Upload(filePath string) string {
 	sw, err := goseaweedfs.NewSeaweed(mHost, []string{upHost}, 160000, &http.Client{Timeout: 30 * time.Second})
 	if err != nil {
-		Log("upload.AssignFileId", "", err.Error())
+		Log("upload.AssignFileId", err.Error())
 		return ""
 	}
 	if len(sw.Filers()) > 0 {
 		a, e := sw.AssignFileId("", "")
 		if e != nil {
-			Log("upload.AssignFileId", "", e.Error())
+			Log("upload.AssignFileId", e.Error())
 			return ""
 		}
 		r, e := sw.Filers()[0].UploadFile(filePath, a.FileID, "", "")
 		if e != nil {
-			Log("upload.Filer.UploadFile"+filePath+"("+a.FileID+"):", "", e.Error())
+			Log("upload.Filer.UploadFile"+filePath+"("+a.FileID+"):", e.Error())
 			return ""
 		}
 		if len(r.Name) == 0 {
@@ -54,7 +54,7 @@ func Upload(filePath string) string {
 	}
 	_, fp, err := sw.UploadFile(filePath, "", "")
 	if err != nil {
-		Log("upload.UploadFile"+filePath+":", "", err.Error())
+		Log("upload.UploadFile"+filePath+":", err.Error())
 		return ""
 	}
 	return upHost + "/" + fp.FileID

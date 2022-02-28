@@ -39,7 +39,7 @@ func main() {
 	}
 	err := browser.StartFull(*url, *title, *ico, userAgent, *dev, *max, true, true, *width, *height, finish, save, jsFunc, nil, nil)
 	if err != nil {
-		log.Log(*title+":"+*url, userAgent, err.Error())
+		log.Log(*title+":"+*url, err.Error())
 	}
 }
 
@@ -67,7 +67,7 @@ func init() {
 	var err error
 	db, err = bbolt.Open(name, 0666, nil)
 	if err != nil {
-		log.Log("initdb:"+name, "", err.Error())
+		log.Log("initdb:"+name, err.Error())
 		return
 	}
 }
@@ -97,7 +97,7 @@ func getSha(sha string) shaData {
 	var d shaData
 	err := json.Unmarshal(findOne(sha, keyTable), &d)
 	if err != nil {
-		log.Log("getSha", "", err.Error())
+		log.Log("getSha", err.Error())
 		return d
 	}
 	return d
@@ -115,7 +115,7 @@ func findOne(key, table string) (value []byte) {
 		return nil
 	})
 	if err != nil {
-		log.Log("findOneData:"+table+":"+key, "", err.Error())
+		log.Log("findOneData:"+table+":"+key, err.Error())
 		return
 	}
 	return
@@ -132,7 +132,7 @@ func addOne(key, value, table string) (suc bool) {
 		return b.Put([]byte(key), []byte(value))
 	})
 	if err != nil {
-		log.Log("addOne:"+table+":"+key+"-"+value+"-", "", err.Error())
+		log.Log("addOne:"+table+":"+key+"-"+value+"-", err.Error())
 		return false
 	}
 	return true

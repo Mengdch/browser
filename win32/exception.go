@@ -131,5 +131,5 @@ func SetTop(hWnd win.HWND) {
 }
 func logRecord(value, error string) {
 	defer log.CatchPanic("logRecord")
-	log.Log(value, "", error)
+	log.Log(value, error)
 }

@@ -25,6 +25,8 @@ type Thublink struct {
 	_wkeFireMouseEvent                 *windows.LazyProc
 	_wkeFireContextMenuEvent           *windows.LazyProc
 	_wkeFireWindowsMessage             *windows.LazyProc
+	_wkeCreateWebWindow                *windows.LazyProc
+	_wkeShowWindow                     *windows.LazyProc
 	_wkeFireMouseWheelEvent            *windows.LazyProc
 	_wkeFireKeyUpEvent                 *windows.LazyProc
 	_wkeFireKeyDownEvent               *windows.LazyProc
@@ -99,6 +101,8 @@ func (t *Thublink) Init() *Thublink {
 	t._wkeFireMouseWheelEvent = lib.NewProc("mbFireMouseWheelEvent")
 	t._wkeFireContextMenuEvent = lib.NewProc("mbFireContextMenuEvent")
 	t._wkeFireWindowsMessage = lib.NewProc("mbFireWindowsMessage")
+	t._wkeCreateWebWindow = lib.NewProc("mbCreateWebWindow")
+	t._wkeShowWindow = lib.NewProc("mbShowWindow")
 	t._wkeFireMouseEvent = lib.NewProc("mbFireMouseEvent")
 	t._wkeOnLoadUrlBegin = lib.NewProc("mbOnLoadUrlBegin")
 	t._wkeNetOnResponse = lib.NewProc("mbNetOnResponse")
@@ -375,6 +379,29 @@ func (t *Thublink) wkeFireWindowsMessage(wke wkeHandle, hWnd win.HWND, message, 
 	return byte(r) != 0
 }
 
+func (t *Thublink) wkeCreateWebWindow(wt WindowType, parent win.HWND, x, y, width, height int32) wkeHandle {
+	r, _, _ := t._wkeCreateWebWindow.Call(
+		uintptr(wt),
+		uintptr(parent),
+		uintptr(x),
+		uintptr(y),
+		uintptr(width),
+		uintptr(height))
+	return wkeHandle(r)
+}
+
+func (t *Thublink) wkeShowWindow(wke wkeHandle, show bool) {
+	var s int32
+	if show {
+		s = 1
+	} else {
+		s = 0
+	}
+	t._wkeShowWindow.Call(
+		uintptr(wke),
+		uintptr(s))
+}
+
 func (t *Thublink) wkeFireMouseEvent(wke wkeHandle, message, x, y, flags int32) bool {
 	r, _, _ := t._wkeFireMouseEvent.Call(
 		uintptr(wke),
@@ -429,7 +456,7 @@ func (t *Thublink) wkeGetLockedViewDC(handle wkeHandle) win.HDC {
 	r, _, _ := t._wkeGetLockedViewDC.Call(uintptr(handle))
 	return win.HDC(r)
 }
-func (t *Thublink) wkeRunMessageLoop()  {
+func (t *Thublink) wkeRunMessageLoop() {
 	t._wkeRunMessageLoop.Call()
 }
 func strToCharPtr(str string) uintptr {

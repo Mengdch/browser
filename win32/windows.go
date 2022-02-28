@@ -262,10 +262,6 @@ func (w *window) roundRect() { // 有效果，但是很丑，还有bug
 }
 func (w *window) windowMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam uintptr) uintptr {
 	switch msg {
-	case win.WM_MOVE, win.WM_WINDOWPOSCHANGED:
-		var r win.RECT
-		win.GetClientRect(hWnd, &r)
-		win.MoveWindow(w.child, r.Left, r.Top, r.Width(), r.Height(), false)
 	case win.WM_SIZE:
 		if w.child > 0 && w.view != nil {
 			var r win.RECT
