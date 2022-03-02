@@ -54,6 +54,7 @@ type Thublink struct {
 	_wkeOnDownload                     *windows.LazyProc
 	_wkeOnAlertBox                     *windows.LazyProc
 	_wkeOnCreateView                   *windows.LazyProc
+	_wkeSetContextMenuEnabled          *windows.LazyProc
 	_wkeResponseQuery                  *windows.LazyProc
 	_wkeNetGetMIMEType                 *windows.LazyProc
 	_wkeNetSetMIMEType                 *windows.LazyProc
@@ -66,6 +67,8 @@ type Thublink struct {
 	_wkePopupDialogAndDownload         *windows.LazyProc
 	_wkeGetLockedViewDC                *windows.LazyProc
 	_wkeRunMessageLoop                 *windows.LazyProc
+	_wkeWebFrameGetMainFrame           *windows.LazyProc
+	_wkeRunJs                          *windows.LazyProc
 }
 
 const (
@@ -121,6 +124,7 @@ func (t *Thublink) Init() *Thublink {
 	t._wkeOnDownload = lib.NewProc("mbOnDownloadInBlinkThread")
 	t._wkeOnAlertBox = lib.NewProc("mbOnAlertBox")
 	t._wkeOnCreateView = lib.NewProc("mbOnCreateView")
+	t._wkeSetContextMenuEnabled = lib.NewProc("mbSetContextMenuEnabled")
 	t._wkeSetNavigationToNewWindowEnable = lib.NewProc("mbSetNavigationToNewWindowEnable")
 	t._wkeSetUserAgent = lib.NewProc("mbSetUserAgent")
 	t._wkePopupDialogAndDownload = lib.NewProc("mbPopupDialogAndDownload")
@@ -129,6 +133,8 @@ func (t *Thublink) Init() *Thublink {
 	t._wkeResponseQuery = lib.NewProc("mbResponseQuery")
 	t._wkeGetLockedViewDC = lib.NewProc("mbGetLockedViewDC")
 	t._wkeRunMessageLoop = lib.NewProc("mbRunMessageLoop")
+	t._wkeWebFrameGetMainFrame = lib.NewProc("mbWebFrameGetMainFrame")
+	t._wkeRunJs = lib.NewProc("mbRunJs")
 	var set mbSettings
 	set.mask = MB_ENABLE_NODEJS
 	r, _, err := t._wkeInitialize.Call(uintptr(unsafe.Pointer(&set)))
@@ -164,6 +170,9 @@ func (t *Thublink) wkeOnAlertBox(wke wkeHandle, callback wkeOnAlertBoxCallback, 
 }
 func (t *Thublink) wkeOnCreateView(wke wkeHandle, callback wkeOnCreateViewCallback, param uintptr) {
 	t._wkeOnCreateView.Call(uintptr(wke), syscall.NewCallback(callback), param)
+}
+func (t *Thublink) wkeSetContextMenuEnabled(wke wkeHandle, show bool) {
+	t._wkeSetContextMenuEnabled.Call(uintptr(wke), uintptr(toBool(show)))
 }
 func (t *Thublink) wkeSetNavigationToNewWindowEnable(wke wkeHandle, b bool) {
 	t._wkeSetNavigationToNewWindowEnable.Call(uintptr(wke), uintptr(toBool(b)))
@@ -391,15 +400,7 @@ func (t *Thublink) wkeCreateWebWindow(wt WindowType, parent win.HWND, x, y, widt
 }
 
 func (t *Thublink) wkeShowWindow(wke wkeHandle, show bool) {
-	var s int32
-	if show {
-		s = 1
-	} else {
-		s = 0
-	}
-	t._wkeShowWindow.Call(
-		uintptr(wke),
-		uintptr(s))
+	t._wkeShowWindow.Call(uintptr(wke), uintptr(toBool(show)))
 }
 
 func (t *Thublink) wkeFireMouseEvent(wke wkeHandle, message, x, y, flags int32) bool {
@@ -436,6 +437,9 @@ func (t *Thublink) wkeOnPaintBitUpdated(wke wkeHandle, callback wkePaintBitUpdat
 func (t *Thublink) wkeOnPaintUpdated(wke wkeHandle, callback wkePaintUpdatedCallback, param uintptr) {
 	t._wkeOnPaintUpdated.Call(uintptr(wke), syscall.NewCallback(callback), param)
 }
+func (t *Thublink) wkeRunJs(handle wkeHandle, frame wkeFrame, script uintptr, isInClosure bool, callback mbRunJsCallback, param, unUse uintptr) {
+	t._wkeRunJs.Call(uintptr(handle), uintptr(frame), script, uintptr(toBool(isInClosure)), 0, param, unUse)
+}
 
 func (t *Thublink) wkeSetHandle(wke wkeHandle, handle uintptr) {
 	t._wkeSetHandle.Call(uintptr(wke), handle)
@@ -458,6 +462,10 @@ func (t *Thublink) wkeGetLockedViewDC(handle wkeHandle) win.HDC {
 }
 func (t *Thublink) wkeRunMessageLoop() {
 	t._wkeRunMessageLoop.Call()
+}
+func (t *Thublink) wkeWebFrameGetMainFrame(handle wkeHandle) wkeFrame {
+	r, _, _ := t._wkeWebFrameGetMainFrame.Call(uintptr(handle))
+	return wkeFrame(r)
 }
 func strToCharPtr(str string) uintptr {
 	buf := []byte(str)

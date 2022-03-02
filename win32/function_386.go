@@ -14,6 +14,7 @@ func load() *windows.LazyDLL {
 }
 
 type wkeJsQueryCallback func(wke wkeHandle, param uintptr, es jsExecState, queryId uintptr, queryId2 uintptr, customMsg int32, request uintptr) uintptr
+type mbRunJsCallback func(wke wkeHandle, param uintptr, es jsExecState, val uintptr)
 
 func (v *BlinkView) setProc(init bool) {
 	var value int32
@@ -33,4 +34,7 @@ func (v *BlinkView) onJsQuery(wke wkeHandle, param uintptr, es jsExecState, quer
 }
 func (t *Thublink) wkeResponseQuery(wke wkeHandle, queryId uintptr, queryId2 uintptr, customMsg int32, response string) {
 	t._wkeResponseQuery.Call(uintptr(wke), queryId, queryId2, uintptr(customMsg), strToCharPtr(response))
+}
+func (v *BlinkView) onRunJs(wke wkeHandle, param uintptr, es jsExecState, val uintptr) {
+
 }
