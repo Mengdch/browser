@@ -87,7 +87,7 @@ const (
 type mbSettings struct {
 	mbProxy                      ProxyInfo
 	mask                         mbSettingMask
-	blinkThreadInitCallback      mbOnBlinkThreadInitCallback
+	blinkThreadInitCallback      wkeOnBlinkThreadInitCallback
 	blinkThreadInitCallbackParam uintptr
 	version                      uintptr
 	mainDllPath                  uintptr
@@ -220,4 +220,5 @@ type wkeOnAlertBoxCallback func(wke wkeHandle, param uintptr, msg uintptr) uintp
 type wkeOnCreateViewCallback func(wke wkeHandle, param uintptr, naviType wkeNavigationType, url uintptr, feature uintptr) uintptr
 type wkeNetJobDataFinishCallback func(param uintptr, job wkeNetJob, result wkeLoadingResult) uintptr
 type wkeNetJobDataRecvCallback func(param uintptr, job wkeNetJob, data uintptr, length int32) uintptr
-type mbOnBlinkThreadInitCallback func(param uintptr) uintptr
+type wkeOnBlinkThreadInitCallback func(param uintptr) uintptr
+type wkeLoadingFinishCallback func(wke wkeHandle, param uintptr, frame wkeFrame, url uintptr, result wkeLoadingResult, reason uintptr) uintptr

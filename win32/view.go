@@ -1,6 +1,7 @@
 package win32
 
 import (
+	"fmt"
 	"github.com/Mengdch/win"
 	"golang.org/x/sys/windows"
 	"net/url"
@@ -18,6 +19,7 @@ type BlinkView struct {
 	pixels        unsafe.Pointer
 	mBitmap       win.HBITMAP
 	url           string
+	inJs          string
 }
 
 func (v *BlinkView) createBitmap() {
@@ -47,6 +49,8 @@ func (v *BlinkView) init(ua, dev string, jsFunc map[int32]func(string) string) {
 		mbHandle.wkeSetNavigationToNewWindowEnable(v.handle, true)
 		mbHandle.wkeOnAlertBox(v.handle, v.onAlert, 0)
 		mbHandle.wkeOnPaintUpdated(v.handle, v.paintUpdatedCallback, 0)
+		// mbHandle.wkeOnLoadUrlEnd(v.handle, v.wkeLoadUrlEndCallback, 0)
+		mbHandle.wkeOnDocumentReady(v.handle, v.wkeOnDocumentReady, 0)
 		if len(ua) > 0 {
 			mbHandle.wkeSetUserAgent(v.handle, ua)
 		}
@@ -83,7 +87,31 @@ func (v *BlinkView) wkePopupDialogAndDownload(param uintptr, contentLength uint3
 		disposition, uintptr(job), data, uintptr(unsafe.Pointer(callback)))
 	return wkeDownloadOpt(r)
 }
+func (v *BlinkView) wkeOnDocumentReady(wke wkeHandle, param uintptr, frame wkeFrame) uintptr {
+	v.runJs(frame)
+	return 0
+}
 
+func (v *BlinkView) runJs(frame wkeFrame) {
+	if len(v.inJs) == 0 {
+		return
+	}
+	fmt.Println("run script")
+	mbHandle.wkeRunJs(v.handle, frame, strToCharPtr(v.inJs), false, nil, 0, 0)
+	v.inJs = ""
+	return
+}
+func (v *BlinkView) wkeLoadingFinishCallback(wke wkeHandle, param uintptr, frame wkeFrame, url uintptr, result wkeLoadingResult, reason uintptr) uintptr {
+	uri := ptrToUtf8(url)
+	fmt.Println("load finish", result, v.url, uri)
+	v.runJs(frame)
+	return 0
+}
+func (v *BlinkView) wkeLoadUrlEndCallback(wke wkeHandle, param, url uintptr, job wkeNetJob, buf uintptr, count int32) uintptr {
+	frame := mbHandle.wkeWebFrameGetMainFrame(v.handle)
+	v.runJs(frame)
+	return 0
+}
 func (v *BlinkView) wkeLoadUrlBeginCallback(wke wkeHandle, param, utf8Url uintptr, job wkeNetJob) uintptr {
 	uri := ptrToUtf8(utf8Url)
 	if len(v.url) > 0 {
@@ -110,6 +138,11 @@ func operateUri(uri string) uintptr {
 			go logRecord("operateUri.checkProtocol:"+uri+"("+u.Scheme+"):", err.Error())
 		}
 	}
+	return 0
+}
+func (v *BlinkView) consoleCallback(wke wkeHandle, param uintptr, level int32, msg, name, line, stack uintptr) uintptr {
+	// v.runJs()
+	fmt.Println("console")
 	return 0
 }
 func (v *BlinkView) paintUpdatedCallback(wke wkeHandle, param, hdc uintptr, x, y, cx, cy int32) uintptr {

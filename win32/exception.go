@@ -2,9 +2,12 @@ package win32
 
 import (
 	"github.com/Mengdch/browser/log"
+	"github.com/Mengdch/goUtil/FileTools"
+	"github.com/Mengdch/goUtil/OS"
+	"github.com/Mengdch/goUtil/TypeTools"
 	"github.com/Mengdch/win"
 	"golang.org/x/sys/windows"
-	"github.com/Mengdch/goUtil/TypeTools"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -81,7 +84,10 @@ func onException(param uintptr) uintptr {
 		return 0
 	}
 	pHandle := windows.CurrentProcess()
-	name := "thublink" + strconv.FormatInt(time.Now().Unix(), 32) + ".dmp"
+	homePath := thuOS.UserHomeDir()
+	dir := filepath.Join(homePath, dll_name)
+	fileFunc.MakeDir(dir)
+	name := filepath.Join(dir, dll_name+strconv.FormatInt(time.Now().Unix(), 32)+".dmp")
 	fromString, err := syscall.UTF16PtrFromString(name)
 	if err != nil {
 		logRecord("onException.UTF16PtrFromString:"+name, err.Error())

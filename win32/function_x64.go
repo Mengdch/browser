@@ -14,7 +14,7 @@ func load() *windows.LazyDLL {
 }
 
 type wkeJsQueryCallback func(wke wkeHandle, param uintptr, es jsExecState, queryId uintptr, customMsg int32, request uintptr) uintptr
-type mbRunJsCallback func(wke wkeHandle, param uintptr, es jsExecState, val1, val2 uintptr)
+type wkeRunJsCallback func(wke wkeHandle, param uintptr, es jsExecState, val1, val2 uintptr)
 
 func (v *BlinkView) setProc(init bool) {
 	var value uintptr

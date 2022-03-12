@@ -69,6 +69,7 @@ type Thublink struct {
 	_wkeRunMessageLoop                 *windows.LazyProc
 	_wkeWebFrameGetMainFrame           *windows.LazyProc
 	_wkeRunJs                          *windows.LazyProc
+	_wkeOnLoadingFinish                *windows.LazyProc
 }
 
 const (
@@ -135,6 +136,7 @@ func (t *Thublink) Init() *Thublink {
 	t._wkeRunMessageLoop = lib.NewProc("mbRunMessageLoop")
 	t._wkeWebFrameGetMainFrame = lib.NewProc("mbWebFrameGetMainFrame")
 	t._wkeRunJs = lib.NewProc("mbRunJs")
+	t._wkeOnLoadingFinish = lib.NewProc("mbOnLoadingFinish")
 	var set mbSettings
 	set.mask = MB_ENABLE_NODEJS
 	r, _, err := t._wkeInitialize.Call(uintptr(unsafe.Pointer(&set)))
@@ -437,7 +439,10 @@ func (t *Thublink) wkeOnPaintBitUpdated(wke wkeHandle, callback wkePaintBitUpdat
 func (t *Thublink) wkeOnPaintUpdated(wke wkeHandle, callback wkePaintUpdatedCallback, param uintptr) {
 	t._wkeOnPaintUpdated.Call(uintptr(wke), syscall.NewCallback(callback), param)
 }
-func (t *Thublink) wkeRunJs(handle wkeHandle, frame wkeFrame, script uintptr, isInClosure bool, callback mbRunJsCallback, param, unUse uintptr) {
+func (t *Thublink) wkeOnLoadingFinish(wke wkeHandle, callback wkeLoadingFinishCallback, param uintptr) {
+	t._wkeOnLoadingFinish.Call(uintptr(wke), syscall.NewCallback(callback), param)
+}
+func (t *Thublink) wkeRunJs(handle wkeHandle, frame wkeFrame, script uintptr, isInClosure bool, callback wkeRunJsCallback, param, unUse uintptr) {
 	t._wkeRunJs.Call(uintptr(handle), uintptr(frame), script, uintptr(toBool(isInClosure)), 0, param, unUse)
 }
 
