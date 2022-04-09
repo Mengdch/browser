@@ -2,6 +2,7 @@ package win32
 
 import (
 	"fmt"
+	"github.com/Mengdch/goUtil/TypeTools"
 	"github.com/Mengdch/win"
 	"golang.org/x/sys/windows"
 	"syscall"
@@ -70,6 +71,7 @@ type Thublink struct {
 	_wkeWebFrameGetMainFrame           *windows.LazyProc
 	_wkeRunJs                          *windows.LazyProc
 	_wkeOnLoadingFinish                *windows.LazyProc
+	_wkeEnableHighDPISupport           *windows.LazyProc
 }
 
 const (
@@ -77,7 +79,11 @@ const (
 )
 
 func (t *Thublink) Init() *Thublink {
-	lib := load()
+	lib := windows.NewLazyDLL(filepath.Join(fileFunc.NowPath(), getName()))
+	if !fileFunc.CheckFileExist(lib.Name) {
+		fmt.Println(lib.Name)
+		return nil
+	}
 	t._wkeSetViewProxy = lib.NewProc("mbSetViewProxy")
 	t._wkeSetTransparent = lib.NewProc("mbSetTransparent")
 	t._wkeOnDocumentReady2 = lib.NewProc("mbOnDocumentReady")
@@ -137,6 +143,7 @@ func (t *Thublink) Init() *Thublink {
 	t._wkeWebFrameGetMainFrame = lib.NewProc("mbWebFrameGetMainFrame")
 	t._wkeRunJs = lib.NewProc("mbRunJs")
 	t._wkeOnLoadingFinish = lib.NewProc("mbOnLoadingFinish")
+	t._wkeEnableHighDPISupport = lib.NewProc("mbEnableHighDPISupport")
 	var set mbSettings
 	set.mask = MB_ENABLE_NODEJS
 	r, _, err := t._wkeInitialize.Call(uintptr(unsafe.Pointer(&set)))
@@ -441,6 +448,9 @@ func (t *Thublink) wkeOnPaintUpdated(wke wkeHandle, callback wkePaintUpdatedCall
 }
 func (t *Thublink) wkeOnLoadingFinish(wke wkeHandle, callback wkeLoadingFinishCallback, param uintptr) {
 	t._wkeOnLoadingFinish.Call(uintptr(wke), syscall.NewCallback(callback), param)
+}
+func (t *Thublink) wkeEnableHighDPISupport() {
+	t._wkeEnableHighDPISupport.Call()
 }
 func (t *Thublink) wkeRunJs(handle wkeHandle, frame wkeFrame, script uintptr, isInClosure bool, callback wkeRunJsCallback, param, unUse uintptr) {
 	t._wkeRunJs.Call(uintptr(handle), uintptr(frame), script, uintptr(toBool(isInClosure)), 0, param, unUse)

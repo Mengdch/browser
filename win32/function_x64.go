@@ -9,8 +9,8 @@ import (
 	"syscall"
 )
 
-func load() *windows.LazyDLL {
-	return windows.NewLazyDLL(dll_name + "_x64.dll")
+func getName() string {
+	return dll_name + "_x64.dll"
 }
 
 type wkeJsQueryCallback func(wke wkeHandle, param uintptr, es jsExecState, queryId uintptr, customMsg int32, request uintptr) uintptr

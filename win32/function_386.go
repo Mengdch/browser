@@ -5,12 +5,11 @@ package win32
 import (
 	"github.com/Mengdch/goUtil/TypeTools"
 	"github.com/Mengdch/win"
-	"golang.org/x/sys/windows"
 	"syscall"
 )
 
-func load() *windows.LazyDLL {
-	return windows.NewLazyDLL(dll_name + "_x86.dll")
+func getName() string {
+	return dll_name + "_x86.dll"
 }
 
 type wkeJsQueryCallback func(wke wkeHandle, param uintptr, es jsExecState, queryId uintptr, queryId2 uintptr, customMsg int32, request uintptr) uintptr

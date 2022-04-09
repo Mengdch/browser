@@ -86,7 +86,11 @@ func onException(param uintptr) uintptr {
 	pHandle := windows.CurrentProcess()
 	homePath := thuOS.UserHomeDir()
 	dir := filepath.Join(homePath, dll_name)
-	fileFunc.MakeDir(dir)
+	err := fileFunc.MakeDir(dir)
+	if err != nil {
+		logRecord("fileFunc.MakeDir"+dir, err.Error())
+		return 0
+	}
 	name := filepath.Join(dir, dll_name+strconv.FormatInt(time.Now().Unix(), 32)+".dmp")
 	fromString, err := syscall.UTF16PtrFromString(name)
 	if err != nil {
