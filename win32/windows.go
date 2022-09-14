@@ -255,10 +255,11 @@ func (w *window) roundRect() { // 有效果，但是很丑，还有bug
 		WM_NCHITTEST
 		将“标题”/“边框”/“角落”功能（即移动和调整窗口大小）分配到窗口的任意区域。
 	*/
-	var r win.RECT
-	win.GetWindowRect(w.hWnd, &r)
-	rgn := win.CreateRoundRectRgn(r.Left, r.Top, r.Right, r.Bottom, 20, 20)
-	win.SetWindowRgn(w.hWnd, rgn, true)
+	r, e := win.GetWindowRect(w.hWnd)
+	if e {
+		rgn := win.CreateRoundRectRgn(r.Left, r.Top, r.Right, r.Bottom, 20, 20)
+		win.SetWindowRgn(w.hWnd, rgn, true)
+	}
 }
 func (w *window) windowMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam uintptr) uintptr {
 	switch msg {

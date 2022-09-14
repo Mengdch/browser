@@ -5,7 +5,6 @@ package win32
 import (
 	"github.com/Mengdch/goUtil/TypeTools"
 	"github.com/Mengdch/win"
-	"golang.org/x/sys/windows"
 	"syscall"
 )
 

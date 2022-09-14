@@ -2,9 +2,10 @@ package win32
 
 import (
 	"fmt"
-	"github.com/Mengdch/goUtil/TypeTools"
+	"github.com/Mengdch/goUtil/FileTools"
 	"github.com/Mengdch/win"
 	"golang.org/x/sys/windows"
+	"path/filepath"
 	"syscall"
 	"unsafe"
 )
@@ -154,8 +155,10 @@ func (t *Thublink) Init() *Thublink {
 }
 
 func GetBound(h win.HWND) win.RECT {
-	rect := win.RECT{}
-	win.GetWindowRect(h, &rect)
+	rect, e := win.GetWindowRect(h)
+	if !e {
+		return win.RECT{}
+	}
 	bn := win.RECT{
 		Left: rect.Left,
 		Top:  rect.Top,
