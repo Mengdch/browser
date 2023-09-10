@@ -36,6 +36,10 @@ type FinishCallback func(url string, success bool)
 
 func init() {
 	mbHandle = new(Thublink).Init()
+	if mbHandle == nil {
+		return
+	}
+	mbHandle.wkeEnableHighDPISupport()
 	var err error
 	classNamePtr, err = syscall.UTF16PtrFromString(className)
 	if err != nil {
