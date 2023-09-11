@@ -1,9 +1,9 @@
+//go:build 386
 // +build 386
 
 package win32
 
 import (
-	"github.com/Mengdch/goUtil/TypeTools"
 	"github.com/Mengdch/win"
 	"syscall"
 )
@@ -27,7 +27,7 @@ func (v *BlinkView) setProc(init bool) {
 func (v *BlinkView) onJsQuery(wke wkeHandle, param uintptr, es jsExecState, queryId uintptr, queryId2 uintptr, customMsg int32, request uintptr) uintptr {
 	if f, e := v.fnMap[customMsg]; e {
 		response := f(ptrToUtf8(request))
-		mbHandle.wkeResponseQuery(wke, queryId, queryId2, customMsg, TypeTools.OutJson(response))
+		mbHandle.wkeResponseQuery(wke, queryId, queryId2, customMsg, response)
 	}
 	return 0
 }
