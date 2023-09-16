@@ -55,6 +55,7 @@ func (v *BlinkView) init(ua, dev string, jsFunc map[int32]func(string) string) {
 			mbHandle.wkeSetUserAgent(v.handle, ua)
 		}
 		if len(dev) > 0 {
+			dev = "file:///" + strings.ReplaceAll(dev, "\\", "/") + "/inspector.html"
 			mbHandle.wkeSetDebugConfig(v.handle, showDevTools, dev)
 		}
 	}
