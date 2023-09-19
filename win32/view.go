@@ -176,13 +176,13 @@ func (v *BlinkView) OnWndProc(hWnd win.HWND, msg uint32, wParam, lParam uintptr)
 	case win.WM_SIZE:
 		w, h := int32(win.LOWORD(uint32(lParam))), int32(win.HIWORD(uint32(lParam)))
 		v.resize(w, h, true)
-	case win.WM_KEYDOWN:
+	case win.WM_SYSKEYDOWN, win.WM_KEYDOWN:
 		if v.keyDown(msg, wParam, lParam, mbHandle.wkeFireKeyDownEvent) {
-			return 0
+			return win.DefWindowProc(hWnd, msg, wParam, lParam)
 		}
-	case win.WM_KEYUP:
+	case win.WM_SYSKEYUP, win.WM_KEYUP:
 		if v.keyDown(msg, wParam, lParam, mbHandle.wkeFireKeyUpEvent) {
-			return 0
+			return win.DefWindowProc(hWnd, msg, wParam, lParam)
 		}
 	case win.WM_CHAR:
 		if v.keyDown(msg, wParam, lParam, mbHandle.wkeFireKeyPressEvent) {
