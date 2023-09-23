@@ -159,7 +159,9 @@ func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib bool, width
 	main := FormProfile{Title: title, UserAgent: ua, index: url, devPath: devPath, Max: max, Mb: mb, Ib: ib,
 		jsFunction: jsFunc, subs: forms, Width: width, Height: height, main: true, finish: f, save: s}
 	loadIcon(ico)
-	main.newBlinkWindow(set)
+	if !main.newBlinkWindow(set) {
+		return errors.New("not start")
+	}
 	// 3. 主消息循环
 	msg := (*win.MSG)(unsafe.Pointer(win.GlobalAlloc(0, unsafe.Sizeof(win.MSG{}))))
 	defer win.GlobalFree(win.HGLOBAL(unsafe.Pointer(msg)))
@@ -175,7 +177,7 @@ func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib bool, width
 	return nil
 }
 
-func (fp FormProfile) newBlinkWindow(set func(uintptr)) {
+func (fp FormProfile) newBlinkWindow(set func(uintptr)) bool {
 	w := window{profile: fp}
 	w.init()
 	if set != nil {
@@ -184,7 +186,9 @@ func (fp FormProfile) newBlinkWindow(set func(uintptr)) {
 	v := BlinkView{}
 	var r win.RECT
 	win.GetClientRect(w.hWnd, &r)
-	v.init(fp.UserAgent, fp.devPath, fp.jsFunction)
+	if !v.init(fp.UserAgent, fp.devPath, fp.jsFunction) {
+		return false
+	}
 	v.SetOnNewWindow(w.onCreateView)
 	v.setDownloadCallback(w.wkeOnDownloadCallback)
 	w.child = newClassWindow(0, win.WS_CHILD|win.WS_VISIBLE|win.WS_CLIPSIBLINGS|win.WS_CLIPCHILDREN, w.hWnd, r.Width(), r.Height(), classViewNamePtr, windowViewNamePtr, v.OnWndProc)
@@ -194,6 +198,7 @@ func (fp FormProfile) newBlinkWindow(set func(uintptr)) {
 	mbHandle.wkeOnLoadUrlBegin(v.handle, v.wkeLoadUrlBeginCallback, 0)
 	urls = append(urls, fp.index)
 	w.view = &v
+	return true
 }
 
 func loadIcon(ico string) {

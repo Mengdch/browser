@@ -41,7 +41,7 @@ func (v *BlinkView) createBitmap() {
 	v.mBitmap = hBmp
 }
 
-func (v *BlinkView) init(ua, dev string, jsFunc map[int32]func(string) string) {
+func (v *BlinkView) init(ua, dev string, jsFunc map[int32]func(string) string) bool {
 	v.fnMap = jsFunc
 	if mbHandle != nil {
 		v.handle = mbHandle.wkeCreateWebView()
@@ -59,8 +59,9 @@ func (v *BlinkView) init(ua, dev string, jsFunc map[int32]func(string) string) {
 			dev = "file:///" + strings.ReplaceAll(dev, "\\", "/") + "/inspector.html"
 			mbHandle.wkeSetDebugConfig(v.handle, showDevTools, dev)
 		}
+		return true
 	}
-	return
+	return false
 }
 
 func (v *BlinkView) setHWnd(parent win.HWND) {
