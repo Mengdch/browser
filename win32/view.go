@@ -118,6 +118,10 @@ func (v *BlinkView) wkeLoadUrlEndCallback(wke wkeHandle, param, url uintptr, job
 func (v *BlinkView) wkeLoadUrlBeginCallback(wke wkeHandle, param, utf8Url uintptr, job wkeNetJob) uintptr {
 	uri := ptrToUtf8(utf8Url)
 	if len(v.url) > 0 {
+		if len(v.inJs) > 0 {
+			frame := mbHandle.wkeWebFrameGetMainFrame(wke)
+			v.runJs(frame)
+		}
 		go logRecord("loadUrlBegin:"+v.url, "")
 		v.url = ""
 	}
@@ -164,8 +168,13 @@ func (v *BlinkView) paintUpdatedCallback(wke wkeHandle, param, hdc uintptr, x, y
 }
 
 func (v *BlinkView) LoadUrl(url string) {
+	v.LoadUrlScript(url, "")
+}
+func (v *BlinkView) LoadUrlScript(url, script string) {
 	v.url = url
+	v.inJs = script
 	mbHandle.wkeLoadURL(v.handle, url)
+	mbHandle.wkeOnLoadUrlBegin(v.handle, v.wkeLoadUrlBeginCallback, 0) // 这里没找到为什么必须加载后
 }
 func (v *BlinkView) SetOnNewWindow(callback wkeOnCreateViewCallback) {
 	mbHandle.wkeOnCreateView(v.handle, callback, 0)
