@@ -1,8 +1,8 @@
 package win32
 
 import (
+	"errors"
 	"fmt"
-	"github.com/Mengdch/goUtil/FileTools"
 	"github.com/Mengdch/win"
 	"golang.org/x/sys/windows"
 	"path/filepath"
@@ -95,12 +95,11 @@ func newWindow(exStyle, style uint32, parent win.HWND, width, height int32, proc
 }
 func newClassWindow(exStyle, style uint32, parent win.HWND, width, height int32, className, windowName *uint16,
 	proc func(hWnd win.HWND, msg uint32, wParam, lParam uintptr) uintptr) win.HWND {
-	var x, y int32
-	if parent == 0 && style&win.WS_MAXIMIZE == 0 { // 居中
-		sw := win.GetSystemMetrics(win.SM_CXFULLSCREEN)
-		sh := win.GetSystemMetrics(win.SM_CYFULLSCREEN)
-		x = (sw - width) / 2
-		y = (sh - height) / 2
+	var x, y, sw, sh int32
+	noMax := parent == 0 && style&win.WS_MAXIMIZE == 0
+	if noMax { // 居中
+		sw, sh = getRect()
+		x, y, width, height = getMiddlePos(width, height, sw, sh)
 	}
 	wnd := win.CreateWindowEx(exStyle, className, windowName, style, x, y, width, height,
 		parent, 0, hInst, unsafe.Pointer(nil))
@@ -108,6 +107,31 @@ func newClassWindow(exStyle, style uint32, parent win.HWND, width, height int32,
 		procMap[wnd] = syscall.NewCallbackCDecl(proc)
 	}
 	return wnd
+}
+func getRect() (int32, int32) {
+	m := win.MonitorFromPoint(0, 0, win.MONITOR_DEFAULTTOPRIMARY)
+	var sw, sh int32
+	if m > 0 {
+		var i win.MONITORINFO
+		i.CbSize = uint32(unsafe.Sizeof(win.MONITORINFO{}))
+		win.GetMonitorInfo(m, &i)
+		sw = i.RcWork.Width()
+		sh = i.RcWork.Height()
+	} else {
+		sw = win.GetSystemMetrics(win.SM_CXFULLSCREEN)
+		sh = win.GetSystemMetrics(win.SM_CYFULLSCREEN)
+	}
+	return sw, sh
+}
+func getMiddlePos(width, height, sw, sh int32) (int32, int32, int32, int32) {
+	var top, left int32
+	if width < sw {
+		left = (sw - width) / 2
+	}
+	if height < sh {
+		top = (sh - height) / 2
+	}
+	return left, top, width, height
 }
 
 type FormProfile struct {
