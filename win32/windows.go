@@ -104,6 +104,15 @@ func newClassWindow(exStyle, style uint32, parent win.HWND, width, height int32,
 	wnd := win.CreateWindowEx(exStyle, className, windowName, style, x, y, width, height,
 		parent, 0, hInst, unsafe.Pointer(nil))
 	if wnd != 0 {
+		if noMax {
+			dpi := GetDPI(wnd)
+			if dpi != 1.0 {
+				width := int32(float64(width) * dpi)
+				height := int32(float64(height) * dpi)
+				x, y, width, height = getMiddlePos(width, height, sw, sh)
+				win.SetWindowPos(wnd, win.HWND_NOTOPMOST, x, y, width, height, win.SWP_NOREDRAW)
+			}
+		}
 		procMap[wnd] = syscall.NewCallbackCDecl(proc)
 	}
 	return wnd
