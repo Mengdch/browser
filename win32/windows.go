@@ -29,6 +29,7 @@ var (
 	mbHandle          *Thublink
 	iconHandle        win.HANDLE
 	urls              []string
+	main              *Window
 )
 
 type SaveCallback func(url, path string)
@@ -160,6 +161,16 @@ type FormProfile struct {
 	finish     FinishCallback
 }
 
+func ShowMainWindow(url, script string, x, y int32) {
+	if len(url) == 0 {
+		return
+	}
+	if main != nil {
+		main.profile.index = url
+		main.view.LoadUrlScript(url, script)
+		win.SetWindowPos(main.hWnd, win.HWND_TOPMOST, x, y, 0, 0, win.SWP_NOSIZE|win.SWP_NOREDRAW|win.SWP_NOACTIVATE|win.SWP_SHOWWINDOW)
+	}
+}
 func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib bool, width, height int,
 	jsFunc map[int32]func(string) string, forms map[string]FormProfile, set func(uintptr),
 	s SaveCallback, f FinishCallback) error {
@@ -219,6 +230,9 @@ func (fp FormProfile) newBlinkWindow(set func(uintptr)) bool {
 	v := BlinkView{}
 	var r win.RECT
 	win.GetClientRect(w.hWnd, &r)
+	if fp.main {
+		main = &w
+	}
 	if !v.init(fp.UserAgent, fp.devPath, fp.jsFunction) {
 		return false
 	}

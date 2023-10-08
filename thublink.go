@@ -31,3 +31,6 @@ func StartFull(url, title, ico, ua, devPath string, max, mb, ib bool, width, hei
 	log.SetUA(ua)
 	return win32.StartBlinkMain(url, title, ico, ua, devPath, max, mb, ib, width, height, jsFunc, forms, catchSet, save, finish)
 }
+func Show(url, script string, x, y int32) {
+	win32.ShowMainWindow(url, script, x, y)
+}
