@@ -159,6 +159,7 @@ type FormProfile struct {
 	main       bool
 	save       SaveCallback
 	finish     FinishCallback
+	background bool
 }
 
 func ShowMainWindow(url, script string, x, y int32) {
@@ -171,7 +172,7 @@ func ShowMainWindow(url, script string, x, y int32) {
 		win.SetWindowPos(main.hWnd, win.HWND_TOPMOST, x, y, 0, 0, win.SWP_NOSIZE|win.SWP_NOREDRAW|win.SWP_NOACTIVATE|win.SWP_SHOWWINDOW)
 	}
 }
-func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib bool, width, height int,
+func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib, show bool, width, height int,
 	jsFunc map[int32]func(string) string, forms map[string]FormProfile, set func(uintptr),
 	s SaveCallback, f FinishCallback) error {
 	runtime.LockOSThread()
@@ -201,7 +202,7 @@ func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib bool, width
 		forms[i] = v
 	}
 	main := FormProfile{Title: title, UserAgent: ua, index: url, devPath: devPath, Max: max, Mb: mb, Ib: ib,
-		jsFunction: jsFunc, subs: forms, Width: width, Height: height, main: true, finish: f, save: s}
+		jsFunction: jsFunc, subs: forms, Width: width, Height: height, main: true, finish: f, save: s, background: !show}
 	loadIcon(ico)
 	if !main.newBlinkWindow(set) {
 		return errors.New("not start")
