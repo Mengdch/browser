@@ -208,6 +208,11 @@ func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib, show bool,
 		return errors.New("not start")
 	}
 	// 3. 主消息循环
+	MainLoop()
+	return nil
+}
+
+func MainLoop() {
 	msg := (*win.MSG)(unsafe.Pointer(win.GlobalAlloc(0, unsafe.Sizeof(win.MSG{}))))
 	defer win.GlobalFree(win.HGLOBAL(unsafe.Pointer(msg)))
 	for win.GetMessage(msg, 0, 0, 0) > 0 {
@@ -219,6 +224,7 @@ func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib, show bool,
 		win.TranslateMessage(msg)
 		win.DispatchMessage(msg)
 	}
+}
 	return nil
 }
 
