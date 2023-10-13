@@ -7,6 +7,7 @@ import (
 	"golang.org/x/sys/windows"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 	"unsafe"
@@ -159,6 +160,7 @@ type FormProfile struct {
 	main       bool
 	save       SaveCallback
 	finish     FinishCallback
+	domain     []string
 	background bool
 }
 
@@ -174,7 +176,7 @@ func ShowMainWindow(url, script string, x, y int32) {
 }
 func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib, show bool, width, height int,
 	jsFunc map[int32]func(string) string, forms map[string]FormProfile, set func(uintptr),
-	s SaveCallback, f FinishCallback) error {
+	s SaveCallback, f FinishCallback, domains []string) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	for i, v := range forms {
@@ -199,6 +201,7 @@ func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib, show bool,
 		v.finish = f
 		v.save = s
 		v.index = i
+		v.domain = domains
 		forms[i] = v
 	}
 	main := FormProfile{Title: title, UserAgent: ua, index: url, devPath: devPath, Max: max, Mb: mb, Ib: ib,
@@ -225,7 +228,17 @@ func MainLoop() {
 		win.DispatchMessage(msg)
 	}
 }
-	return nil
+
+func (fp FormProfile) noTitle() bool {
+	if len(fp.index) == 0 { // TODO 临时
+		return true
+	}
+	for i := range fp.domain {
+		if strings.Contains(fp.index, fp.domain[i]) {
+			return true
+		}
+	}
+	return false
 }
 
 func (fp FormProfile) newBlinkWindow(set func(uintptr)) bool {
@@ -298,7 +311,12 @@ func (w *window) init() {
 }
 
 func (w *window) style() uint32 {
-	var style uint32 = win.WS_OVERLAPPEDWINDOW | win.WS_VISIBLE | win.WS_CLIPSIBLINGS | win.WS_CLIPCHILDREN
+	var style uint32 = win.CS_DROPSHADOW
+	if w.profile.noTitle() {
+		style |= win.WS_POPUP | win.WS_THICKFRAME
+	} else {
+		style |= win.WS_OVERLAPPEDWINDOW
+	}
 	if !w.profile.Ib {
 		style ^= win.WS_MINIMIZEBOX
 	}
