@@ -3,6 +3,7 @@ package win32
 import (
 	"errors"
 	"fmt"
+	thuOS "github.com/Mengdch/goUtil/OS"
 	"github.com/Mengdch/win"
 	"golang.org/x/sys/windows"
 	"path/filepath"
@@ -92,16 +93,23 @@ func classMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam uintptr) uin
 	}
 	return win.DefWindowProc(hWnd, msg, wParam, lParam)
 }
-func newWindow(exStyle, style uint32, parent win.HWND, width, height int32, proc func(hWnd win.HWND, msg uint32, wParam, lParam uintptr) uintptr) win.HWND {
-	return newClassWindow(exStyle, style, parent, width, height, classNamePtr, windowNamePtr, proc)
+func newWindow(exStyle, style uint32, pos int, parent win.HWND, width, height int32, proc func(hWnd win.HWND, msg uint32, wParam, lParam uintptr) uintptr) win.HWND {
+	return newClassWindow(exStyle, style, parent, pos, width, height, classNamePtr, windowNamePtr, proc)
 }
-func newClassWindow(exStyle, style uint32, parent win.HWND, width, height int32, className, windowName *uint16,
+func newClassWindow(exStyle, style uint32, parent win.HWND, pos int, width, height int32, className, windowName *uint16,
 	proc func(hWnd win.HWND, msg uint32, wParam, lParam uintptr) uintptr) win.HWND {
 	var x, y, sw, sh int32
 	noMax := parent == 0 && style&win.WS_MAXIMIZE == 0
 	if noMax { // 居中
 		sw, sh = getRect()
 		x, y, width, height = getMiddlePos(width, height, sw, sh)
+		switch pos {
+		case thuOS.LeftTop:
+			x, y = 0, 0
+		case thuOS.RightBottom:
+			x = sw - width
+			y = sh - height
+		}
 	}
 	wnd := win.CreateWindowEx(exStyle, className, windowName, style, x, y, width, height,
 		parent, 0, hInst, unsafe.Pointer(nil))
@@ -162,6 +170,7 @@ type FormProfile struct {
 	finish     FinishCallback
 	domain     []string
 	background bool
+	pos        int
 }
 
 func ShowMainWindow(url, script string, x, y int32) {
@@ -174,7 +183,7 @@ func ShowMainWindow(url, script string, x, y int32) {
 		win.SetWindowPos(main.hWnd, win.HWND_TOPMOST, x, y, 0, 0, win.SWP_NOSIZE|win.SWP_NOREDRAW|win.SWP_NOACTIVATE|win.SWP_SHOWWINDOW)
 	}
 }
-func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib, show bool, width, height int,
+func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib, show, size bool, width, height, pos int,
 	jsFunc map[int32]func(string) string, forms map[string]FormProfile, set func(uintptr),
 	s SaveCallback, f FinishCallback, domains []string) error {
 	runtime.LockOSThread()
@@ -204,8 +213,8 @@ func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib, show bool,
 		v.domain = domains
 		forms[i] = v
 	}
-	main := FormProfile{Title: title, UserAgent: ua, index: url, devPath: devPath, Max: max, Mb: mb, Ib: ib,
-		jsFunction: jsFunc, subs: forms, Width: width, Height: height, main: true, finish: f, save: s, background: !show}
+	main := FormProfile{Title: title, UserAgent: ua, index: url, devPath: devPath, Max: max, Mb: mb, Ib: ib, background: !show, main: true,
+		jsFunction: jsFunc, subs: forms, Width: width, Height: height, close: close, finish: f, save: s, domain: domains, size: size, pos: pos}
 	loadIcon(ico)
 	if !main.newBlinkWindow(set) {
 		return errors.New("not start")
@@ -258,7 +267,7 @@ func (fp FormProfile) newBlinkWindow(set func(uintptr)) bool {
 	}
 	v.SetOnNewWindow(w.onCreateView)
 	v.setDownloadCallback(w.wkeOnDownloadCallback)
-	w.child = newClassWindow(0, win.WS_CHILD|win.WS_VISIBLE|win.WS_CLIPSIBLINGS|win.WS_CLIPCHILDREN, w.hWnd, r.Width(), r.Height(), classViewNamePtr, windowViewNamePtr, v.OnWndProc)
+	w.child = newClassWindow(0, win.WS_CHILD|win.WS_VISIBLE|win.WS_CLIPSIBLINGS|win.WS_CLIPCHILDREN, w.hWnd, thuOS.Center, r.Width(), r.Height(), classViewNamePtr, windowViewNamePtr, v.OnWndProc)
 	v.setHWnd(w.child)
 	v.resize(r.Width(), r.Height(), true)
 	v.LoadUrl(fp.index)
@@ -299,14 +308,16 @@ type window struct {
 func (w *window) init() {
 	w.down = make(map[string]*downInfo)
 	w.bind = make(map[string]*wkeDownloadBind)
-	w.hWnd = newWindow(0, w.style(), 0, int32(w.profile.Width), int32(w.profile.Height), w.windowMsgProc)
+	w.hWnd = newWindow(0, w.style(), w.profile.pos, 0, int32(w.profile.Width), int32(w.profile.Height), w.windowMsgProc)
 	if w.hWnd == 0 {
 		return
 	}
 	if iconHandle != 0 {
 		win.SendMessage(w.hWnd, win.WM_SETICON, 1, uintptr(iconHandle))
 	}
-	win.SetWindowText(w.hWnd, w.profile.Title)
+	if len(w.profile.Title) > 0 {
+		win.SetWindowText(w.hWnd, w.profile.Title)
+	}
 	win.ShowWindow(w.hWnd, win.SW_SHOW)
 }
 
