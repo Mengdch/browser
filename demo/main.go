@@ -8,6 +8,7 @@ import (
 	"github.com/Mengdch/browser"
 	"github.com/Mengdch/browser/log"
 	"github.com/Mengdch/goUtil/FileTools"
+	thuOS "github.com/Mengdch/goUtil/OS"
 	"github.com/Mengdch/goUtil/TypeTools"
 	"go.etcd.io/bbolt"
 	"path/filepath"
@@ -20,6 +21,7 @@ func main() {
 	defer log.CatchPanic("main")
 	url := flag.String("url", "https://www.baidu.com", "链接")
 	title := flag.String("title", "aa", "标题")
+	noTitles := flag.String("noHead", "[\"xsdt1.i-xinnuo.com\"]", "无标题域名")
 	ico := flag.String("icon", "", "图标")
 	dev := flag.String("dev", "", "调试目录")
 	ua := flag.String("ua", "", "UserAgent")
@@ -27,6 +29,11 @@ func main() {
 	width := flag.Int("width", 1600, "宽")
 	height := flag.Int("height", 900, "高")
 	flag.Parse()
+	var domains []string
+	err := json.Unmarshal([]byte(*noTitles), &domains)
+	if err != nil {
+		return
+	}
 	userAgent = *ua
 	if len(*url) == 0 {
 		return
@@ -37,7 +44,7 @@ func main() {
 			return s
 		},
 	}
-	err := browser.StartFull(*url, *title, *ico, userAgent, *dev, *max, true, true, *width, *height, finish, save, jsFunc, nil, nil)
+	err = browser.StartFull(*url, *title, *ico, userAgent, *dev, *max, true, true, true, *width, *height, thuOS.Center, finish, save, jsFunc, nil, nil, nil, domains)
 	if err != nil {
 		log.Log(*title+":"+*url, err.Error())
 	}
@@ -51,7 +58,11 @@ func finish(url string, success bool) {
 	if len(name) == 0 {
 		return
 	}
-	val := fileFunc.ReadFileByte(name)
+	val, err := fileFunc.ReadFileByte(name)
+	if err != nil {
+		log.Log("finish:"+name, err.Error())
+		return
+	}
 	sum256 := sha256.Sum256(val)
 	sha := hex.EncodeToString(sum256[:])
 	saveSha(sha, name, url, len(val))
