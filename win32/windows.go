@@ -170,6 +170,8 @@ type FormProfile struct {
 	finish     FinishCallback
 	domain     []string
 	background bool
+	size       bool
+	close      func(uintptr)
 	pos        int
 }
 
@@ -184,7 +186,7 @@ func ShowMainWindow(url, script string, x, y int32) {
 	}
 }
 func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib, show, size bool, width, height, pos int,
-	jsFunc map[int32]func(string) string, forms map[string]FormProfile, set func(uintptr),
+	jsFunc map[int32]func(string) string, forms map[string]FormProfile, set, close func(uintptr),
 	s SaveCallback, f FinishCallback, domains []string) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -368,6 +370,9 @@ func (w *window) windowMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam
 		}
 		w.view.close()
 		if w.profile.main {
+			if w.profile.close != nil {
+				w.profile.close(uintptr(w.hWnd))
+			}
 			win.PostQuitMessage(0)
 		}
 	}
@@ -424,6 +429,7 @@ func (w *window) onCreateView(wke wkeHandle, param uintptr, naviType wkeNavigati
 		n := w.profile
 		n.index = a
 		n.main = false
+		n.close = nil
 		n.newBlinkWindow(nil)
 	}
 	return 0
