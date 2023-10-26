@@ -21,6 +21,7 @@ type BlinkView struct {
 	mBitmap       win.HBITMAP
 	url           string
 	inJs          string
+	parent        *Window
 }
 
 func (v *BlinkView) createBitmap() {
@@ -92,6 +93,9 @@ func (v *BlinkView) wkePopupDialogAndDownload(param uintptr, contentLength uint3
 }
 func (v *BlinkView) wkeOnDocumentReady(wke wkeHandle, param uintptr, frame wkeFrame) uintptr {
 	v.runJs(frame)
+	if v.parent != nil {
+		v.parent.show()
+	}
 	return 0
 }
 
@@ -124,7 +128,11 @@ func (v *BlinkView) wkeLoadUrlBeginCallback(wke wkeHandle, param, utf8Url uintpt
 		}
 		go logRecord("loadUrlBegin:"+v.url, "")
 		v.url = ""
+		if v.parent != nil {
+			v.parent.show()
+		}
 	}
+
 	return operateUri(uri)
 }
 

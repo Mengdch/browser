@@ -320,10 +320,26 @@ func (w *window) init() {
 	if len(w.profile.Title) > 0 {
 		win.SetWindowText(w.hWnd, w.profile.Title)
 	}
-	win.ShowWindow(w.hWnd, win.SW_SHOW)
+	//w.show()
 }
+func (w *window) show() {
+	if win.IsWindowVisible(w.hWnd) {
+		return
+	}
+	nCmdShow := win.SW_SHOW
+	if w.profile.background {
+		nCmdShow = win.SW_HIDE
+	}
+	win.ShowWindow(w.hWnd, int32(nCmdShow))
+	win.UpdateWindow(w.hWnd)
+	if !w.profile.background {
+		win.SetForegroundWindow(w.hWnd)
+		win.SetActiveWindow(w.hWnd)
+		win.SetFocus(w.hWnd)
 
-func (w *window) style() uint32 {
+	}
+}
+func (w *Window) style() uint32 {
 	var style uint32 = win.CS_DROPSHADOW
 	if w.profile.noTitle() {
 		style |= win.WS_POPUP | win.WS_THICKFRAME
