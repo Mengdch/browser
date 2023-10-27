@@ -51,8 +51,8 @@ func (v *BlinkView) init(ua, dev string, jsFunc map[int32]func(string) string) b
 		mbHandle.wkeSetNavigationToNewWindowEnable(v.handle, true)
 		mbHandle.wkeOnAlertBox(v.handle, v.onAlert, 0)
 		mbHandle.wkeOnPaintUpdated(v.handle, v.paintUpdatedCallback, 0)
-		// mbHandle.wkeOnLoadUrlEnd(v.handle, v.wkeLoadUrlEndCallback, 0)
-		mbHandle.wkeOnDocumentReady(v.handle, v.wkeOnDocumentReady, 0)
+		//mbHandle.wkeOnLoadUrlEnd(v.handle, v.wkeLoadUrlEndCallback, 0)
+		//mbHandle.wkeOnDocumentReady(v.handle, v.wkeOnDocumentReady, 0)
 		if len(ua) > 0 {
 			mbHandle.wkeSetUserAgent(v.handle, ua)
 		}
@@ -81,7 +81,7 @@ func (v *BlinkView) close() {
 	mbHandle.wkeSetHandle(v.handle, 0)
 	mbHandle.wkeDestroyWebView(v.handle)
 }
-func (v *BlinkView) setDownloadCallback(callback func(wke wkeHandle, param uintptr, length uint32, url, mime, disposition uintptr, job wkeNetJob, dataBind uintptr) wkeDownloadOpt) {
+func (v *BlinkView) SetDownloadCallback(callback func(wke wkeHandle, param uintptr, length uint32, url, mime, disposition uintptr, job wkeNetJob, dataBind uintptr) wkeDownloadOpt) {
 	mbHandle.wkeOnDownload(v.handle, callback, 0)
 	return
 }

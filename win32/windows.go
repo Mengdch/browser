@@ -268,7 +268,7 @@ func (fp FormProfile) newBlinkWindow(set func(uintptr)) bool {
 		return false
 	}
 	v.SetOnNewWindow(w.onCreateView)
-	v.setDownloadCallback(w.wkeOnDownloadCallback)
+	v.SetDownloadCallback(w.wkeOnDownloadCallback)
 	w.child = newClassWindow(0, win.WS_CHILD|win.WS_VISIBLE|win.WS_CLIPSIBLINGS|win.WS_CLIPCHILDREN, w.hWnd, thuOS.Center, r.Width(), r.Height(), classViewNamePtr, windowViewNamePtr, v.OnWndProc)
 	v.setHWnd(w.child)
 	v.resize(r.Width(), r.Height(), true)
