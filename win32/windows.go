@@ -37,12 +37,15 @@ var (
 type SaveCallback func(url, path string)
 type FinishCallback func(url string, success bool)
 
+var winMap map[win.HWND]*Window
+
 func init() {
 	mbHandle = new(Thublink).Init()
 	if mbHandle == nil {
 		return
 	}
 	mbHandle.wkeEnableHighDPISupport()
+	winMap = make(map[win.HWND]*Window)
 	var err error
 	classNamePtr, err = syscall.UTF16PtrFromString(className)
 	if err != nil {
@@ -232,6 +235,12 @@ func MainLoop() {
 	for win.GetMessage(msg, 0, 0, 0) > 0 {
 		// fmt.Println(msg.Message, msg.HWnd, msg.LParam, msg.WParam)
 		if msg.Message == win.WM_QUIT {
+			for k, w := range winMap {
+				if w.profile.close != nil {
+					w.profile.close(uintptr(k))
+					break
+				}
+			}
 			mbHandle.wkeUnInit()
 			break
 		}
@@ -253,14 +262,15 @@ func (fp FormProfile) noTitle() bool {
 }
 
 func (fp FormProfile) newBlinkWindow(set func(uintptr)) bool {
-	w := window{profile: fp}
+	w := Window{profile: fp}
 	w.init()
 	if set != nil {
 		set(uintptr(w.hWnd))
 	}
-	v := BlinkView{}
+	v := BlinkView{parent: &w}
 	var r win.RECT
 	win.GetClientRect(w.hWnd, &r)
+	winMap[w.hWnd] = &w
 	if fp.main {
 		main = &w
 	}
@@ -269,12 +279,13 @@ func (fp FormProfile) newBlinkWindow(set func(uintptr)) bool {
 	}
 	v.SetOnNewWindow(w.onCreateView)
 	v.SetDownloadCallback(w.wkeOnDownloadCallback)
-	w.child = newClassWindow(0, win.WS_CHILD|win.WS_VISIBLE|win.WS_CLIPSIBLINGS|win.WS_CLIPCHILDREN, w.hWnd, thuOS.Center, r.Width(), r.Height(), classViewNamePtr, windowViewNamePtr, v.OnWndProc)
-	v.setHWnd(w.child)
+	child := newClassWindow(0, win.WS_CHILD|win.WS_VISIBLE|win.WS_CLIPSIBLINGS|win.WS_CLIPCHILDREN, w.hWnd, thuOS.Center,
+		0, 0, r.Width(), r.Height(), classViewNamePtr, windowViewNamePtr, v.OnWndProc)
+	v.setHWnd(child)
 	v.resize(r.Width(), r.Height(), true)
-	v.LoadUrl(fp.index)
-	mbHandle.wkeOnLoadUrlBegin(v.handle, v.wkeLoadUrlBeginCallback, 0)
-	urls = append(urls, fp.index)
+	if len(fp.index) > 0 {
+		v.LoadUrl(fp.index)
+	}
 	w.view = &v
 	return true
 }
@@ -307,7 +318,7 @@ type window struct {
 	mux     sync.Mutex
 }
 
-func (w *window) init() {
+func (w *Window) init() {
 	w.down = make(map[string]*downInfo)
 	w.bind = make(map[string]*wkeDownloadBind)
 	w.hWnd = newWindow(0, w.style(), w.profile.pos, 0, int32(w.profile.Width), int32(w.profile.Height), w.windowMsgProc)
@@ -322,7 +333,7 @@ func (w *window) init() {
 	}
 	//w.show()
 }
-func (w *window) show() {
+func (w *Window) show() {
 	if win.IsWindowVisible(w.hWnd) {
 		return
 	}
@@ -357,7 +368,7 @@ func (w *Window) style() uint32 {
 	}
 	return style
 }
-func (w *window) roundRect() { // 有效果，但是很丑，还有bug
+func (w *Window) roundRect() { // 有效果，但是很丑，还有bug
 	/*
 		您可以创建一个没有任何框架的窗口，使用WS_EX_LAYERED获取透明度，然后在WM_PAINT中“正常”绘制包含自定义框架的窗口，或者组成一个离屏位图，并使用
 		UpdateLayeredWindow
@@ -371,7 +382,7 @@ func (w *window) roundRect() { // 有效果，但是很丑，还有bug
 		win.SetWindowRgn(w.hWnd, rgn, true)
 	}
 }
-func (w *window) windowMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam uintptr) uintptr {
+func (w *Window) windowMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam uintptr) uintptr {
 	switch msg {
 	case win.WM_SIZE:
 		if w.child > 0 && w.view != nil {
@@ -394,7 +405,7 @@ func (w *window) windowMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam
 	}
 	return win.DefWindowProc(hWnd, msg, wParam, lParam)
 }
-func (w *window) wkeOnDownloadCallback(wke wkeHandle, param uintptr, length uint32, url, mime, disposition uintptr, job wkeNetJob, dataBind uintptr) wkeDownloadOpt {
+func (w *Window) wkeOnDownloadCallback(wke wkeHandle, param uintptr, length uint32, url, mime, disposition uintptr, job wkeNetJob, dataBind uintptr) wkeDownloadOpt {
 	info := downInfo{}
 	urlStr := ptrToUtf8(url)
 	info.url = strToCharPtr(urlStr)
@@ -429,12 +440,12 @@ func (w *window) wkeOnDownloadCallback(wke wkeHandle, param uintptr, length uint
 	w.bind[urlStr] = &bind
 	return w.view.wkePopupDialogAndDownload(param, length, url, mime, disposition, job, dataBind, &bind)
 }
-func (w *window) onCreateView(wke wkeHandle, param uintptr, naviType wkeNavigationType, url, feature uintptr) uintptr {
+func (w *Window) onCreateView(wke wkeHandle, param uintptr, naviType wkeNavigationType, url, feature uintptr) uintptr {
 	a := ptrToUtf8(url)
 	if Debug() {
 		fmt.Println("onCreateView", a)
 	}
-	urls = append(urls, a)
+	urls = append(urls, "onCreateView:"+a)
 	if v, e := w.profile.subs[a]; e {
 		v.newBlinkWindow(nil)
 	} else {

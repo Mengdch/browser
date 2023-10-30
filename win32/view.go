@@ -181,6 +181,7 @@ func (v *BlinkView) LoadUrl(url string) {
 func (v *BlinkView) LoadUrlScript(url, script string) {
 	v.url = url
 	v.inJs = script
+	urls = append(urls, "load:"+url)
 	mbHandle.wkeLoadURL(v.handle, url)
 	mbHandle.wkeOnLoadUrlBegin(v.handle, v.wkeLoadUrlBeginCallback, 0) // 这里没找到为什么必须加载后
 }
