@@ -273,6 +273,23 @@ func (fp FormProfile) newBlinkWindow(set func(uintptr)) bool {
 	winMap[w.hWnd] = &w
 	if fp.main {
 		main = &w
+		if fp.jsFunction == nil {
+			fp.jsFunction = make(map[int32]func(string) string)
+		}
+		fp.jsFunction[0] = func(s string) string {
+			cw := win.GetForegroundWindow()
+			cur := winMap[cw]
+			if cur == nil {
+				return ""
+			}
+			switch s {
+			case "close":
+				cur.close()
+			case "min":
+				cur.min()
+			}
+			return ""
+		}
 	}
 	if !v.init(fp.UserAgent, fp.devPath, fp.jsFunction) {
 		return false
@@ -308,7 +325,7 @@ func loadIcon(ico string) {
 	}
 }
 
-type window struct {
+type Window struct {
 	hWnd    win.HWND
 	child   win.HWND
 	profile FormProfile
@@ -460,6 +477,12 @@ func (w *Window) onCreateView(wke wkeHandle, param uintptr, naviType wkeNavigati
 		n.newBlinkWindow(nil)
 	}
 	return 0
+}
+func (w *Window) close() {
+	win.SendMessage(w.hWnd, win.WM_CLOSE, 0, 0)
+}
+func (w *Window) min() {
+	win.ShowWindow(w.hWnd, win.SW_MINIMIZE)
 }
 func Debug() bool {
 	return true
