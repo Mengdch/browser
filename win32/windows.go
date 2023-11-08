@@ -191,8 +191,12 @@ func ShowMainWindow(url, script string, x, y int32) {
 func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib, show, size bool, width, height, pos int,
 	jsFunc map[int32]func(string) string, forms map[string]FormProfile, set, close func(uintptr),
 	s SaveCallback, f FinishCallback, domains []string) error {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
+	return StartBlinkMainAll(url, title, ico, ua, devPath, "", max, mb, ib, show, size, width, height, pos,
+		0, jsFunc, forms, set, close, s, f, domains)
+}
+func StartBlinkMainAll(url, title, ico, ua, devPath, script string, max, mb, ib, show, size bool, width, height, pos, parent int,
+	jsFunc map[int32]func(string) string, forms map[string]FormProfile, set, close func(uintptr),
+	s SaveCallback, f FinishCallback, domains []string) error {
 	for i, v := range forms {
 		if len(v.Title) == 0 {
 			v.Title = title
@@ -223,6 +227,9 @@ func StartBlinkMain(url, title, ico, ua, devPath string, max, mb, ib, show, size
 	loadIcon(ico)
 	if !main.newBlinkWindow(set) {
 		return errors.New("not start")
+	}
+	if parent > 0 {
+		win.SetWindowLong(main.win.hWnd, win.GWL_HWNDPARENT, int32(parent))
 	}
 	// 3. 主消息循环
 	MainLoop()
@@ -327,7 +334,6 @@ func loadIcon(ico string) {
 
 type Window struct {
 	hWnd    win.HWND
-	child   win.HWND
 	profile FormProfile
 	view    *BlinkView
 	down    map[string]*downInfo
@@ -402,7 +408,7 @@ func (w *Window) roundRect() { // 有效果，但是很丑，还有bug
 func (w *Window) windowMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam uintptr) uintptr {
 	switch msg {
 	case win.WM_SIZE:
-		if w.child > 0 && w.view != nil {
+		if w.view != nil {
 			var r win.RECT
 			win.GetClientRect(hWnd, &r)
 			win.MoveWindow(w.child, r.Left, r.Top, r.Width(), r.Height(), true)
