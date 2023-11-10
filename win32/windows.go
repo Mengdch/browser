@@ -294,6 +294,10 @@ func (fp FormProfile) newBlinkWindow(set func(uintptr)) bool {
 				cur.close()
 			case "min":
 				cur.min()
+			case "max":
+				cur.max()
+			case "restore":
+				cur.restore()
 			}
 			return ""
 		}
@@ -339,6 +343,7 @@ type Window struct {
 	down    map[string]*downInfo
 	bind    map[string]*wkeDownloadBind
 	mux     sync.Mutex
+	last    win.RECT
 }
 
 func (w *Window) init() {
@@ -489,6 +494,28 @@ func (w *Window) close() {
 }
 func (w *Window) min() {
 	win.ShowWindow(w.hWnd, win.SW_MINIMIZE)
+}
+func (w *Window) max() {
+	if w.profile.noTitle() {
+		if w.last.Top == w.last.Bottom {
+			w.last, _ = win.GetWindowRect(w.hWnd)
+			var rect win.RECT
+			win.SystemParametersInfo(win.SPI_GETWORKAREA, 0, unsafe.Pointer(&rect), 0)
+			win.MoveWindow(w.hWnd, 0, 0, rect.Width(), rect.Height(), true)
+		}
+	} else {
+		win.ShowWindow(w.hWnd, win.SW_MAXIMIZE)
+	}
+}
+func (w *Window) restore() {
+	if w.profile.noTitle() {
+		if w.last.Bottom > w.last.Top {
+			win.MoveWindow(w.hWnd, w.last.Left, w.last.Top, w.last.Width(), w.last.Height(), false)
+			w.last.Bottom = w.last.Top
+		}
+	} else {
+		win.ShowWindow(w.hWnd, win.SW_RESTORE)
+	}
 }
 func Debug() bool {
 	return true
