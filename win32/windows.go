@@ -97,13 +97,13 @@ func classMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam uintptr) uin
 	return win.DefWindowProc(hWnd, msg, wParam, lParam)
 }
 func newWindow(exStyle, style uint32, pos int, parent win.HWND, width, height int32, proc func(hWnd win.HWND, msg uint32, wParam, lParam uintptr) uintptr) win.HWND {
-	return newClassWindow(exStyle, style, parent, pos, width, height, classNamePtr, windowNamePtr, proc)
+	return newClassWindow(exStyle, style, parent, pos, 0, 0, width, height, classNamePtr, windowNamePtr, proc)
 }
-func newClassWindow(exStyle, style uint32, parent win.HWND, pos int, width, height int32, className, windowName *uint16,
+func newClassWindow(exStyle, style uint32, parent win.HWND, pos int, left, top, width, height int32, className, windowName *uint16,
 	proc func(hWnd win.HWND, msg uint32, wParam, lParam uintptr) uintptr) win.HWND {
 	var x, y, sw, sh int32
 	noMax := parent == 0 && style&win.WS_MAXIMIZE == 0
-	if noMax { // 居中
+	if noMax && left == 0 && top == 0 { // 居中
 		sw, sh = getRect()
 		x, y, width, height = getMiddlePos(width, height, sw, sh)
 		switch pos {
@@ -113,6 +113,8 @@ func newClassWindow(exStyle, style uint32, parent win.HWND, pos int, width, heig
 			x = sw - width
 			y = sh - height
 		}
+	} else {
+		x, y = left, top
 	}
 	wnd := win.CreateWindowEx(exStyle, className, windowName, style, x, y, width, height,
 		parent, 0, hInst, unsafe.Pointer(nil))
@@ -123,6 +125,9 @@ func newClassWindow(exStyle, style uint32, parent win.HWND, pos int, width, heig
 				width := int32(float64(width) * dpi)
 				height := int32(float64(height) * dpi)
 				x, y, width, height = getMiddlePos(width, height, sw, sh)
+				if left != 0 || top != 0 {
+					x, y = left, top
+				}
 				win.SetWindowPos(wnd, win.HWND_NOTOPMOST, x, y, width, height, win.SWP_NOREDRAW)
 			}
 		}
