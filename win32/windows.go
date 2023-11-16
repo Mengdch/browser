@@ -424,6 +424,11 @@ func (w *Window) windowMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam
 			win.MoveWindow(w.child, r.Left, r.Top, r.Width(), r.Height(), true)
 			w.view.resize(r.Width(), r.Height(), false)
 		}
+	case win.WM_SETFOCUS:
+		if w.view != nil && w.view.mWnd != 0 {
+			win.SetFocus(w.view.mWnd)
+		}
+		return 0
 	case win.WM_CLOSE:
 		if w.view == nil {
 			break
