@@ -430,10 +430,15 @@ func (w *Window) windowMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam
 		}
 		return 0
 	case win.WM_CLOSE:
-		if w.view == nil {
-			break
+		if w.profile.background {
+			win.ShowWindow(w.hWnd, win.SW_HIDE)
+			return 0
 		}
-		w.view.close()
+		fallthrough
+	case win.WM_QUIT:
+		if w.view != nil {
+			w.view.close()
+		}
 		if w.profile.main {
 			if w.profile.close != nil {
 				w.profile.close(uintptr(w.hWnd))
