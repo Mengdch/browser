@@ -179,6 +179,7 @@ type FormProfile struct {
 	domain     []string
 	background bool
 	size       bool
+	win        *Window
 	close      func(uintptr)
 	pos        int
 }
@@ -320,6 +321,7 @@ func (fp FormProfile) newBlinkWindow(set func(uintptr)) bool {
 		v.LoadUrl(fp.index)
 	}
 	w.view = &v
+	fp.win = &w
 	return true
 }
 
@@ -396,8 +398,8 @@ func (w *Window) style() uint32 {
 	if !w.profile.Mb {
 		style ^= win.WS_MAXIMIZEBOX
 	}
-	if w.profile.Max {
-		style |= win.WS_MAXIMIZE
+	if !w.profile.size {
+		style ^= win.WS_THICKFRAME
 	}
 	return style
 }
