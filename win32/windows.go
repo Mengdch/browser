@@ -3,11 +3,11 @@ package win32
 import (
 	"errors"
 	"fmt"
+	"github.com/Mengdch/goUtil/FileTools"
 	thuOS "github.com/Mengdch/goUtil/OS"
 	"github.com/Mengdch/win"
 	"golang.org/x/sys/windows"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -423,7 +423,21 @@ func (w *Window) windowMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam
 		if w.view != nil {
 			var r win.RECT
 			win.GetClientRect(hWnd, &r)
-			win.MoveWindow(w.child, r.Left, r.Top, r.Width(), r.Height(), true)
+			if !w.profile.Max { // 如果是允许最大化这里要改
+				// 兼容win7
+				dpi := GetDPI(hWnd)
+				width := int32(w.profile.Width)
+				height := int32(w.profile.Height)
+				if dpi != 1.0 {
+					width = int32(float64(width) * dpi)
+					height = int32(float64(height) * dpi)
+				}
+				if r.Width() > width || r.Height() > height {
+					win.SetWindowPos(hWnd, win.HWND_NOTOPMOST, 0, 0, width, height, win.SWP_NOMOVE)
+					return 0
+				}
+			}
+			win.MoveWindow(w.view.mWnd, r.Left, r.Top, r.Width(), r.Height(), true)
 			w.view.resize(r.Width(), r.Height(), false)
 		}
 	case win.WM_SETFOCUS:
