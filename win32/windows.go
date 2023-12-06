@@ -190,7 +190,7 @@ func ShowMainWindow(url, script string, x, y int32) {
 	}
 	if main != nil {
 		main.profile.index = url
-		main.view.LoadUrlScript(url, script)
+		main.view.LoadUrlScript(url, "", script)
 		win.SetWindowPos(main.hWnd, win.HWND_TOPMOST, x, y, 0, 0, win.SWP_NOSIZE|win.SWP_NOREDRAW|win.SWP_NOACTIVATE|win.SWP_SHOWWINDOW)
 	}
 }
@@ -308,7 +308,7 @@ func (fp FormProfile) newBlinkWindow(set func(uintptr)) bool {
 			return ""
 		}
 	}
-	if !v.init(fp.UserAgent, fp.devPath, fp.jsFunction) {
+	if !v.init(fp.UserAgent, fp.devPath, fp.jsFunction, nil) {
 		return false
 	}
 	v.SetOnNewWindow(w.onCreateView)
