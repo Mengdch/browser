@@ -73,6 +73,7 @@ type Thublink struct {
 	_wkeRunJs                          *windows.LazyProc
 	_wkeOnLoadingFinish                *windows.LazyProc
 	_wkeEnableHighDPISupport           *windows.LazyProc
+	_wkeOnTitleChanged                 *windows.LazyProc
 }
 
 const (
@@ -145,6 +146,7 @@ func (t *Thublink) Init() *Thublink {
 	t._wkeRunJs = lib.NewProc("mbRunJs")
 	t._wkeOnLoadingFinish = lib.NewProc("mbOnLoadingFinish")
 	t._wkeEnableHighDPISupport = lib.NewProc("mbEnableHighDPISupport")
+	t._wkeOnTitleChanged = lib.NewProc("mbOnTitleChanged")
 	var set mbSettings
 	set.mask = MB_ENABLE_NODEJS
 	r, _, err := t._wkeInitialize.Call(uintptr(unsafe.Pointer(&set)))
@@ -451,6 +453,9 @@ func (t *Thublink) wkeOnPaintUpdated(wke wkeHandle, callback wkePaintUpdatedCall
 }
 func (t *Thublink) wkeOnLoadingFinish(wke wkeHandle, callback wkeLoadingFinishCallback, param uintptr) {
 	t._wkeOnLoadingFinish.Call(uintptr(wke), syscall.NewCallback(callback), param)
+}
+func (t *Thublink) wkeOnTitleChanged(wke wkeHandle, callback wkeTitleChangedCallback, param uintptr) {
+	t._wkeOnTitleChanged.Call(uintptr(wke), syscall.NewCallback(callback), param)
 }
 func (t *Thublink) wkeEnableHighDPISupport() {
 	t._wkeEnableHighDPISupport.Call()

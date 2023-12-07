@@ -222,3 +222,4 @@ type wkeNetJobDataFinishCallback func(param uintptr, job wkeNetJob, result wkeLo
 type wkeNetJobDataRecvCallback func(param uintptr, job wkeNetJob, data uintptr, length int32) uintptr
 type wkeOnBlinkThreadInitCallback func(param uintptr) uintptr
 type wkeLoadingFinishCallback func(wke wkeHandle, param uintptr, frame wkeFrame, url uintptr, result wkeLoadingResult, reason uintptr) uintptr
+type wkeTitleChangedCallback func(wke wkeHandle, param, title uintptr) uintptr

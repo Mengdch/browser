@@ -308,7 +308,7 @@ func (fp FormProfile) newBlinkWindow(set func(uintptr)) bool {
 			return ""
 		}
 	}
-	if !v.init(fp.UserAgent, fp.devPath, fp.jsFunction, nil) {
+	if !v.init(fp.UserAgent, fp.devPath, fp.jsFunction) {
 		return false
 	}
 	v.SetOnNewWindow(w.onCreateView)

@@ -6,14 +6,21 @@ import (
 	"golang.org/x/sys/windows"
 	"net/url"
 	"os/exec"
+	"strconv"
 	"strings"
 	"unsafe"
 )
 
 const (
 	DidStopLoading = "did-stop-loading"
+	PageTitleUpdated = "page-title-updated"
 )
 
+type EventData struct {
+	Handle wkeHandle
+	Frame  wkeFrame
+	Params string
+}
 type BlinkView struct {
 	mWnd          win.HWND
 	handle        wkeHandle
@@ -27,7 +34,7 @@ type BlinkView struct {
 	preJs         string
 	readyJs       string
 	parent        *Window
-	call          map[string]func(string)
+	call          map[string]func(EventData)
 }
 
 func (v *BlinkView) createBitmap() {
@@ -48,9 +55,11 @@ func (v *BlinkView) createBitmap() {
 	v.mBitmap = hBmp
 }
 
-func (v *BlinkView) init(ua, dev string, jsFunc map[int32]func(string) string, call map[string]func(string)) bool {
-	v.fnMap = jsFunc
+func (v *BlinkView) SetCall(call map[string]func(data EventData)) {
 	v.call = call
+}
+func (v *BlinkView) init(ua, dev string, jsFunc map[int32]func(string) string) bool {
+	v.fnMap = jsFunc
 	if mbHandle != nil {
 		v.handle = mbHandle.wkeCreateWebView()
 		mbHandle.wkeSetTransparent(v.handle, false)
@@ -58,7 +67,9 @@ func (v *BlinkView) init(ua, dev string, jsFunc map[int32]func(string) string, c
 		mbHandle.wkeSetNavigationToNewWindowEnable(v.handle, true)
 		mbHandle.wkeOnAlertBox(v.handle, v.onAlert, 0)
 		mbHandle.wkeOnPaintUpdated(v.handle, v.paintUpdatedCallback, 0)
-		//mbHandle.wkeOnLoadUrlEnd(v.handle, v.wkeLoadUrlEndCallback, 0)
+		mbHandle.wkeOnTitleChanged(v.handle, v.titleChanged, 0)
+		mbHandle.wkeOnLoadingFinish(v.handle, v.wkeLoadingFinishCallback, 0)
+		mbHandle.wkeOnLoadUrlEnd(v.handle, v.wkeLoadUrlEndCallback, 0)
 		mbHandle.wkeOnDocumentReady(v.handle, v.wkeOnDocumentReady, 0)
 		if len(ua) > 0 {
 			mbHandle.wkeSetUserAgent(v.handle, ua)
@@ -99,14 +110,12 @@ func (v *BlinkView) wkePopupDialogAndDownload(param uintptr, contentLength uint3
 	return wkeDownloadOpt(r)
 }
 func (v *BlinkView) wkeOnDocumentReady(wke wkeHandle, param uintptr, frame wkeFrame) uintptr {
+	if !mbHandle.wkeIsMainFrame(wke, frame) {
+		return 0
+	}
 	v.runJs(frame, v.readyJs)
 	v.readyJs = ""
-	if v.call != nil {
-		c := v.call[DidStopLoading]
-		if c != nil {
-			c("")
-		}
-	}
+	v.callback(wke, frame, DidStopLoading, "")
 	return 0
 }
 
@@ -119,6 +128,9 @@ func (v *BlinkView) runJs(frame wkeFrame, js string) {
 	return
 }
 func (v *BlinkView) wkeLoadingFinishCallback(wke wkeHandle, param uintptr, frame wkeFrame, url uintptr, result wkeLoadingResult, reason uintptr) uintptr {
+	if !mbHandle.wkeIsMainFrame(wke, frame) {
+		return 0
+	}
 	return 0
 }
 func (v *BlinkView) wkeLoadUrlEndCallback(wke wkeHandle, param, url uintptr, job wkeNetJob, buf uintptr, count int32) uintptr {
@@ -166,6 +178,18 @@ func (v *BlinkView) consoleCallback(wke wkeHandle, param uintptr, level int32, m
 	fmt.Println("console")
 	return 0
 }
+func (v *BlinkView) callback(wke wkeHandle, frame wkeFrame, key, param string) {
+	if v.call != nil {
+		c := v.call[key]
+		if c != nil {
+			c(EventData{wke, frame, param})
+		}
+	}
+}
+func (v *BlinkView) titleChanged(wke wkeHandle, param, title uintptr) uintptr {
+	v.callback(wke, mbHandle.wkeWebFrameGetMainFrame(wke), PageTitleUpdated, ptrToUtf8(title))
+	return 0
+}
 func (v *BlinkView) paintUpdatedCallback(wke wkeHandle, param, hdc uintptr, x, y, cx, cy int32) uintptr {
 	if v.pixels == nil {
 		if v.width != cx || v.height != cy {
@@ -187,8 +211,8 @@ func (v *BlinkView) LoadUrl(url string) {
 func (v *BlinkView) LoadUrlScript(url, pre, ready string) {
 	v.url, v.preJs, v.readyJs = url, pre, ready
 	urls = append(urls, "load:"+url)
-	mbHandle.wkeLoadURL(v.handle, url)
 	mbHandle.wkeOnLoadUrlBegin(v.handle, v.wkeLoadUrlBeginCallback, 0) // 这里没找到为什么必须加载后
+	mbHandle.wkeLoadURL(v.handle, url)
 }
 func (v *BlinkView) SetOnNewWindow(callback wkeOnCreateViewCallback) {
 	mbHandle.wkeOnCreateView(v.handle, callback, 0)
