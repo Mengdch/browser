@@ -13,7 +13,7 @@ import (
 
 const (
 	DidStopLoading = "did-stop-loading"
-	PageTitleUpdated = "page-title-updated"
+	PageTitleUpdated   = "page-title-updated"
 )
 
 type EventData struct {
@@ -35,6 +35,7 @@ type BlinkView struct {
 	readyJs       string
 	parent        *Window
 	call          map[string]func(EventData)
+	mCmd          func(int)
 }
 
 func (v *BlinkView) createBitmap() {
@@ -136,6 +137,7 @@ func (v *BlinkView) wkeLoadingFinishCallback(wke wkeHandle, param uintptr, frame
 func (v *BlinkView) wkeLoadUrlEndCallback(wke wkeHandle, param, url uintptr, job wkeNetJob, buf uintptr, count int32) uintptr {
 	return 0
 }
+
 func (v *BlinkView) wkeLoadUrlBeginCallback(wke wkeHandle, param, utf8Url uintptr, job wkeNetJob) uintptr {
 	uri := ptrToUtf8(utf8Url)
 	if len(v.url) > 0 {
@@ -266,6 +268,11 @@ func (v *BlinkView) OnWndProc(hWnd win.HWND, msg uint32, wParam, lParam uintptr)
 		if mbHandle.wkeFireWindowsMessage(v.handle, hWnd, int32(msg), int32(0), int32(0)) {
 			return 0
 		}
+	case win.WM_COMMAND:
+		if v.mCmd != nil {
+			v.mCmd(int(wParam))
+			return 0
+		}
 	case win.WM_INPUTLANGCHANGE:
 		return win.DefWindowProc(hWnd, msg, wParam, lParam)
 	}
@@ -360,6 +367,13 @@ func (v *BlinkView) keyDown(msg uint32, wParam, lParam uintptr, fun func(wkeHand
 		isSys = true
 	}
 	return fun(v.handle, uint32(wParam), flags, isSys)
+}
+func (v *BlinkView) Id() int {
+	return int(v.handle)
+}
+func (v *BlinkView) NewMenu(items []string, b int, left bool, x, y int32, cmd func(i int)) {
+	v.mCmd = cmd
+	newMenu(v.mWnd, items, b, left, x, y)
 }
 func (v *BlinkView) onAlert(wke wkeHandle, param uintptr, msg uintptr) uintptr {
 	content := ptrToUtf8(msg)
