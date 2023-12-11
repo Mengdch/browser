@@ -205,6 +205,11 @@ type wkeDownloadBind struct {
 	finishCallback   uintptr
 	saveNameCallback uintptr
 }
+type wkeMemBuf struct {
+	unUse  int
+	data   uintptr
+	length uint32
+}
 type wkePopupDialogSaveNameCallback func(ptr, filePath uintptr) uintptr
 type wkePaintBitUpdatedCallback func(wke wkeHandle, param, buf uintptr, rect *wkeRect, width, height int32) uintptr
 type wkePaintUpdatedCallback func(wke wkeHandle, param, hdc uintptr, left, top, width, height int32) uintptr
@@ -223,3 +228,4 @@ type wkeNetJobDataRecvCallback func(param uintptr, job wkeNetJob, data uintptr, 
 type wkeOnBlinkThreadInitCallback func(param uintptr) uintptr
 type wkeLoadingFinishCallback func(wke wkeHandle, param uintptr, frame wkeFrame, url uintptr, result wkeLoadingResult, reason uintptr) uintptr
 type wkeTitleChangedCallback func(wke wkeHandle, param, title uintptr) uintptr
+type wkeNetGetFaviconCallback func(wke wkeHandle, param, url, buf uintptr) uintptr

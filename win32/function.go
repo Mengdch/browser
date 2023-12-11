@@ -74,6 +74,7 @@ type Thublink struct {
 	_wkeOnLoadingFinish                *windows.LazyProc
 	_wkeEnableHighDPISupport           *windows.LazyProc
 	_wkeOnTitleChanged                 *windows.LazyProc
+	_wkeNetGetFavicon                  *windows.LazyProc
 }
 
 const (
@@ -147,6 +148,7 @@ func (t *Thublink) Init() *Thublink {
 	t._wkeOnLoadingFinish = lib.NewProc("mbOnLoadingFinish")
 	t._wkeEnableHighDPISupport = lib.NewProc("mbEnableHighDPISupport")
 	t._wkeOnTitleChanged = lib.NewProc("mbOnTitleChanged")
+	t._wkeNetGetFavicon = lib.NewProc("mbOnNetGetFavicon")
 	var set mbSettings
 	set.mask = MB_ENABLE_NODEJS
 	r, _, err := t._wkeInitialize.Call(uintptr(unsafe.Pointer(&set)))
@@ -459,6 +461,9 @@ func (t *Thublink) wkeOnTitleChanged(wke wkeHandle, callback wkeTitleChangedCall
 }
 func (t *Thublink) wkeEnableHighDPISupport() {
 	t._wkeEnableHighDPISupport.Call()
+}
+func (t *Thublink) wkeNetGetFavicon(wke wkeHandle, callback wkeNetGetFaviconCallback, param uintptr) {
+	t._wkeNetGetFavicon.Call(uintptr(wke), syscall.NewCallback(callback), param)
 }
 func (t *Thublink) wkeRunJs(handle wkeHandle, frame wkeFrame, script uintptr, isInClosure bool, callback wkeRunJsCallback, param, unUse uintptr) {
 	t._wkeRunJs.Call(uintptr(handle), uintptr(frame), script, uintptr(toBool(isInClosure)), 0, param, unUse)
