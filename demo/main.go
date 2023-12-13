@@ -21,7 +21,7 @@ func main() {
 	defer log.CatchPanic("main")
 	url := flag.String("url", "https://www.baidu.com", "链接")
 	title := flag.String("title", "aa", "标题")
-	noTitles := flag.String("noHead", "[\"xsdt1.i-xinnuo.com\"]", "无标题域名")
+	noTitles := flag.String("noHead", "", "无标题域名")
 	ico := flag.String("icon", "", "图标")
 	dev := flag.String("dev", "", "调试目录")
 	ua := flag.String("ua", "", "UserAgent")

@@ -84,7 +84,7 @@ type Thublink struct {
 }
 
 const (
-	dll_name = "thublink"
+	dll_name = "node"
 )
 
 func (t *Thublink) Init() *Thublink {
