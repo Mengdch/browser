@@ -229,3 +229,4 @@ type wkeOnBlinkThreadInitCallback func(param uintptr) uintptr
 type wkeLoadingFinishCallback func(wke wkeHandle, param uintptr, frame wkeFrame, url uintptr, result wkeLoadingResult, reason uintptr) uintptr
 type wkeTitleChangedCallback func(wke wkeHandle, param, title uintptr) uintptr
 type wkeNetGetFaviconCallback func(wke wkeHandle, param, url, buf uintptr) uintptr
+type wkeCanGoBackForwardCallback func(wke wkeHandle, param uintptr, state, buf int32) uintptr //Ok = 0,Fail = 1,

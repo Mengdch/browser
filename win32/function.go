@@ -75,6 +75,12 @@ type Thublink struct {
 	_wkeEnableHighDPISupport           *windows.LazyProc
 	_wkeOnTitleChanged                 *windows.LazyProc
 	_wkeNetGetFavicon                  *windows.LazyProc
+	_wkeReload                         *windows.LazyProc
+	_wkeGetUrl                         *windows.LazyProc
+	_wkeStopLoading                    *windows.LazyProc
+	_wkeGoBack                         *windows.LazyProc
+	_wkeGoForward                      *windows.LazyProc
+	_wkeCanGoForward                   *windows.LazyProc
 }
 
 const (
@@ -149,6 +155,12 @@ func (t *Thublink) Init() *Thublink {
 	t._wkeEnableHighDPISupport = lib.NewProc("mbEnableHighDPISupport")
 	t._wkeOnTitleChanged = lib.NewProc("mbOnTitleChanged")
 	t._wkeNetGetFavicon = lib.NewProc("mbOnNetGetFavicon")
+	t._wkeReload = lib.NewProc("mbReload")
+	t._wkeGetUrl = lib.NewProc("mbGetUrl")
+	t._wkeStopLoading = lib.NewProc("mbStopLoading")
+	t._wkeGoBack = lib.NewProc("mbGoBack")
+	t._wkeGoForward = lib.NewProc("mbGoForward")
+	t._wkeCanGoForward = lib.NewProc("mbCanGoForward")
 	var set mbSettings
 	set.mask = MB_ENABLE_NODEJS
 	r, _, err := t._wkeInitialize.Call(uintptr(unsafe.Pointer(&set)))
@@ -484,16 +496,42 @@ func (t *Thublink) wkeGetHostHWND() win.HWND {
 	return win.HWND(r)
 }
 
-func (t *Thublink) wkeGetLockedViewDC(handle wkeHandle) win.HDC {
-	r, _, _ := t._wkeGetLockedViewDC.Call(uintptr(handle))
+func (t *Thublink) wkeGetLockedViewDC(wke wkeHandle) win.HDC {
+	r, _, _ := t._wkeGetLockedViewDC.Call(uintptr(wke))
 	return win.HDC(r)
 }
 func (t *Thublink) wkeRunMessageLoop() {
 	t._wkeRunMessageLoop.Call()
 }
-func (t *Thublink) wkeWebFrameGetMainFrame(handle wkeHandle) wkeFrame {
-	r, _, _ := t._wkeWebFrameGetMainFrame.Call(uintptr(handle))
+func (t *Thublink) wkeWebFrameGetMainFrame(wke wkeHandle) wkeFrame {
+	r, _, _ := t._wkeWebFrameGetMainFrame.Call(uintptr(wke))
 	return wkeFrame(r)
+}
+func (t *Thublink) wkeReload(wke wkeHandle) {
+	t._wkeReload.Call(uintptr(wke))
+}
+
+func (t *Thublink) wkeGetUrl(wke wkeHandle) uintptr {
+	r, _, _ := t._wkeGetUrl.Call(uintptr(wke))
+	return r
+}
+
+func (t *Thublink) wkeStopLoading(wke wkeHandle) {
+	t._wkeStopLoading.Call(uintptr(wke))
+	return
+}
+func (t *Thublink) wkeGoBack(wke wkeHandle) {
+	t._wkeGoBack.Call(uintptr(wke))
+	return
+}
+
+func (t *Thublink) wkeGoForward(wke wkeHandle) {
+	t._wkeGoForward.Call(uintptr(wke))
+	return
+}
+func (t *Thublink) wkeCanGoForward(wke wkeHandle, callback wkeCanGoBackForwardCallback, param uintptr) {
+	t._wkeGoForward.Call(uintptr(wke), syscall.NewCallback(callback), param)
+	return
 }
 func strToCharPtr(str string) uintptr {
 	buf := []byte(str)
@@ -511,6 +549,16 @@ func StrPtr(s string) (uintptr, error) {
 	return uintptr(unsafe.Pointer(fromString)), nil
 }
 
+func ptrToByte(ptr uintptr, len uint32) []byte {
+	seq := make([]byte, len)
+	if ptr > 0 {
+		for i := uint32(0); i < len; i++ {
+			seq[i] = *((*byte)(unsafe.Pointer(ptr)))
+			ptr++
+		}
+	}
+	return seq
+}
 func ptrToUtf8(ptr uintptr) string {
 	var seq []byte
 	for ptr > 0 {

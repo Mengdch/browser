@@ -16,20 +16,21 @@ type EventData struct {
 	Params string
 }
 type BlinkView struct {
-	mWnd          win.HWND
-	handle        wkeHandle
-	proc          uintptr
-	fnMap         map[int32]func(string) string
-	mDC           win.HDC
-	width, height int32
-	pixels        unsafe.Pointer
-	mBitmap       win.HBITMAP
-	url           string
-	preJs         string
-	readyJs       string
-	parent        *Window
-	call          map[string]func(EventData)
-	mCmd          func(int)
+	mWnd             win.HWND
+	handle           wkeHandle
+	proc             uintptr
+	fnMap            map[int32]func(string) string
+	mDC              win.HDC
+	width, height    int32
+	pixels           unsafe.Pointer
+	mBitmap          win.HBITMAP
+	url              string
+	preJs            string
+	readyJs          string
+	parent           *Window
+	call             map[string]func(EventData)
+	mCmd             func(int)
+	canGoForwardChan chan bool
 }
 
 func (v *BlinkView) createBitmap() {
@@ -55,6 +56,7 @@ func (v *BlinkView) SetCall(call map[string]func(data EventData)) {
 }
 func (v *BlinkView) init(ua, dev string, jsFunc map[int32]func(string) string) bool {
 	v.fnMap = jsFunc
+	v.canGoForwardChan = make(chan bool)
 	if mbHandle != nil {
 		v.handle = mbHandle.wkeCreateWebView()
 		mbHandle.wkeSetTransparent(v.handle, false)
@@ -93,6 +95,9 @@ func (v *BlinkView) close() {
 	mbHandle.wkeOnPaintUpdated(v.handle, nil, uintptr(v.mWnd))
 	mbHandle.wkeSetHandle(v.handle, 0)
 	mbHandle.wkeDestroyWebView(v.handle)
+	if v.mWnd != 0 {
+		win.DestroyWindow(v.mWnd)
+	}
 }
 func (v *BlinkView) SetDownloadCallback(callback func(wke wkeHandle, param uintptr, length uint32, url, mime, disposition uintptr, job wkeNetJob, dataBind uintptr) wkeDownloadOpt) {
 	mbHandle.wkeOnDownload(v.handle, callback, 0)

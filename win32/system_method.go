@@ -2,6 +2,7 @@ package win32
 
 import (
 	"github.com/Mengdch/win"
+	"golang.org/x/sys/windows"
 	"unsafe"
 )
 
@@ -38,4 +39,9 @@ func (w *Window) restore() {
 
 //getAllDisplaysFn getScreenWorkAreaSize
 
-//dialogOpen
+// dialogOpen
+func (w *Window) ShowMessageBox(title, msg string) {
+	content := windows.StringToUTF16Ptr(msg)
+	win.MessageBox(0, content, windows.StringToUTF16Ptr(title), win.MB_ICONINFORMATION|win.MB_OK)
+	return
+}

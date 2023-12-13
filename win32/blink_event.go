@@ -37,8 +37,16 @@ func (v *BlinkView) titleChanged(wke wkeHandle, param, title uintptr) uintptr {
 	return 0
 }
 func (v *BlinkView) wkeGetFavicon(wke wkeHandle, param, url, buf uintptr) uintptr {
+	if buf == 0 {
+		return 0
+	}
 	mb := *((*wkeMemBuf)(unsafe.Pointer(buf)))
-	v.callback(wke, mbHandle.wkeWebFrameGetMainFrame(wke), PageFaviconUpdated, strconv.Itoa(int(mb.length)))
+	var icon string
+	if mb.length > 0 {
+		bs := ptrToByte(mb.data, mb.length)
+		icon = base64.StdEncoding.EncodeToString(bs)
+	}
+	v.callback(wke, mbHandle.wkeWebFrameGetMainFrame(wke), PageFaviconUpdated, icon)
 	return 0
 }
 func (v *BlinkView) wkeLoadingFinishCallback(wke wkeHandle, param uintptr, frame wkeFrame, url uintptr, result wkeLoadingResult, reason uintptr) uintptr {
@@ -69,4 +77,13 @@ func (v *BlinkView) wkeLoadUrlBeginCallback(wke wkeHandle, param, utf8Url uintpt
 	}
 
 	return operateUri(uri)
+}
+func (v *BlinkView) onCanGoForward(wke wkeHandle, param uintptr, state, buf int32) uintptr {
+	fmt.Println("onCanGoForward", state, buf)
+	if state == 0 {
+		v.canGoForwardChan <- buf != 0
+	} else {
+		v.canGoForwardChan <- false
+	}
+	return 0
 }

@@ -14,14 +14,19 @@ type menuItem struct {
 func newMenu(hWnd win.HWND, items []string, base int, left bool, x, y int32) {
 	hm := win.CreatePopupMenu()
 	for x, i := range items {
-		s, e := win.AppendMenu(hm, win.UINT(win.MF_STRING), win.UINT(x+base), win.String2UIntPtr(i))
+		var s bool
+		var e error
+		if len(i) == 0 {
+			s, e = win.AppendMenu(hm, win.UINT(win.MF_SEPARATOR), 0, 0)
+		} else {
+			s, e = win.AppendMenu(hm, win.UINT(win.MF_STRING), win.UINT(x+base), win.String2UIntPtr(i))
+		}
 		if !s {
 			fmt.Println(s, e)
 		}
 	}
 	p := win.POINT{x, y}
 	//win.ClientToScreen(hWnd, &p)
-	fmt.Println(hm, x, y, p, hWnd)
 	var ff uint32
 	if left {
 		ff = win.TPM_LEFTALIGN
