@@ -1,5 +1,4 @@
-1. 这是miniblink的go封装，没用cgo，直接调用win32API，demo文件夹是测试启动程序
-# 概述 Overview
+# 概述 
 
 基于win32API和miniblink封装的GOLANG使用的WebUI，使用原生窗体加内嵌视图的方式实现。目前已完成常用接口封装，后续会逐步完善。
 直接调用DLL，未使用CGO。
@@ -18,12 +17,9 @@ VIP版本需进行购买https://miniblink.net/views/features.html
 
 ----
 
-
 # 使用
 创建一个加载指定链接的窗口：
 
-**Usage**
-具体可参考demo文件夹下文件
 ```go
 func main() {
 	defer log.CatchPanic("main")
@@ -58,12 +54,12 @@ func main() {
 	}
 }
 ```
+具体可参考demo文件夹下文件
+## miniblink文档
 
-## miniblink文档 Document
-
-关于miniblink的介绍见这篇文章：https://zhuanlan.zhihu.com/p/22611497?group_id=764036386641707008
-普通版本API文档见：https://miniblink.net/views/doc/index.html 
-VIP版本API文档见：https://miniblink.net/views/doc/api-doc-vip.html
+- [miniblink的介绍](https://zhuanlan.zhihu.com/p/22611497?group_id=764036386641707008)
+- [普通版本API文档](https://miniblink.net/views/doc/index.html)
+- [VIP版本API文档](https://miniblink.net/views/doc/api-doc-vip.html)
 ----
 
 
