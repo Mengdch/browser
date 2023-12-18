@@ -14,7 +14,7 @@ func logRecord(value, error string) {
 	defer log.CatchPanic("logRecord")
 	log.Log(value+":"+TypeTools.OutJson(urls), error)
 }
-func GetDPI(wndHandle win.HWND) float64 {
+func getDPI(wndHandle win.HWND) float64 {
 	m := win.MonitorFromWindow(wndHandle, win.MONITOR_DEFAULTTONEAREST)
 	if m != 0 {
 		hdc := win.GetDC(wndHandle)

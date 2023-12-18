@@ -120,7 +120,7 @@ func newClassWindow(exStyle, style uint32, parent win.HWND, pos int, left, top, 
 		parent, 0, hInst, unsafe.Pointer(nil))
 	if wnd != 0 {
 		if noMax {
-			dpi := GetDPI(wnd)
+			dpi := getDPI(wnd)
 			if dpi != 1.0 {
 				width := int32(float64(width) * dpi)
 				height := int32(float64(height) * dpi)
@@ -351,6 +351,7 @@ type Window struct {
 	bind    map[string]*wkeDownloadBind
 	mux     sync.Mutex
 	last    win.RECT
+	events  map[string]func(string)
 }
 
 func (w *Window) init() {
@@ -420,12 +421,12 @@ func (w *Window) roundRect() { // 有效果，但是很丑，还有bug
 func (w *Window) windowMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam uintptr) uintptr {
 	switch msg {
 	case win.WM_SIZE:
+		var r win.RECT
+		win.GetClientRect(hWnd, &r)
+		dpi := getDPI(hWnd)
 		if w.view != nil {
-			var r win.RECT
-			win.GetClientRect(hWnd, &r)
 			if !w.profile.Max { // 如果是允许最大化这里要改
 				// 兼容win7
-				dpi := GetDPI(hWnd)
 				width := int32(w.profile.Width)
 				height := int32(w.profile.Height)
 				if dpi != 1.0 {
@@ -440,6 +441,10 @@ func (w *Window) windowMsgProc(hWnd win.HWND, msg uint32, wParam uintptr, lParam
 			win.MoveWindow(w.view.mWnd, r.Left, r.Top, r.Width(), r.Height(), true)
 			w.view.resize(r.Width(), r.Height(), false)
 		}
+		if dpi != 1.0 {
+			//r.Left =
+		}
+		w.callback(SYSTEM_RESIZE, TypeTools.OutJson(r))
 	case win.WM_SETFOCUS:
 		if w.view != nil && w.view.mWnd != 0 {
 			win.SetFocus(w.view.mWnd)
@@ -522,4 +527,7 @@ func (w *Window) onCreateView(wke wkeHandle, param uintptr, naviType wkeNavigati
 }
 func Debug() bool {
 	return true
+}
+func (w *Window) SetCall(call map[string]func(string)) {
+	w.events = call
 }
