@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/Mengdch/goUtil/FileTools"
 	thuOS "github.com/Mengdch/goUtil/OS"
+	"github.com/Mengdch/goUtil/TypeTools"
 	"github.com/Mengdch/win"
 	"golang.org/x/sys/windows"
 	"path/filepath"
