@@ -67,6 +67,7 @@ type Thublink struct {
 	_wkeSetUserAgent                   *windows.LazyProc
 	_wkeSetDebugConfig                 *windows.LazyProc
 	_wkePopupDialogAndDownload         *windows.LazyProc
+	_wkeDownloadByPath                 *windows.LazyProc
 	_wkeGetLockedViewDC                *windows.LazyProc
 	_wkeRunMessageLoop                 *windows.LazyProc
 	_wkeWebFrameGetMainFrame           *windows.LazyProc
@@ -144,6 +145,7 @@ func (t *Thublink) Init() *Thublink {
 	t._wkeSetNavigationToNewWindowEnable = lib.NewProc("mbSetNavigationToNewWindowEnable")
 	t._wkeSetUserAgent = lib.NewProc("mbSetUserAgent")
 	t._wkePopupDialogAndDownload = lib.NewProc("mbPopupDialogAndDownload")
+	t._wkeDownloadByPath = lib.NewProc("mbDownloadByPath")
 	t._wkeSetDebugConfig = lib.NewProc("mbSetDebugConfig")
 	t._wkeOnJsQuery = lib.NewProc("mbOnJsQuery")
 	t._wkeResponseQuery = lib.NewProc("mbResponseQuery")

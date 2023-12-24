@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os/exec"
 	"strings"
+	"sync"
 	"unsafe"
 )
 
@@ -31,8 +32,18 @@ type BlinkView struct {
 	call             map[string]func(EventData)
 	mCmd             func(int)
 	canGoForwardChan chan bool
+	downMap                         map[string]*downInfo
+	dw                              sync.RWMutex
+	downPath                        string
 }
 
+func (v *BlinkView) SetDownPath(dp string) {
+	if len(dp) == 0 {
+		return
+	}
+	v.downPath = dp
+	v.SetDownloadCallback(v.wkeOnDownloadCallback)
+}
 func (v *BlinkView) createBitmap() {
 	var bi win.BITMAPINFOHEADER
 	bi.BiSize = 40 // (win.BITMAPINFOHEADER)
@@ -57,6 +68,7 @@ func (v *BlinkView) SetCall(call map[string]func(data EventData)) {
 func (v *BlinkView) init(ua, dev string, jsFunc map[int32]func(string) string) bool {
 	v.fnMap = jsFunc
 	v.canGoForwardChan = make(chan bool)
+	v.downMap = make(map[string]*downInfo)
 	if mbHandle != nil {
 		v.handle = mbHandle.wkeCreateWebView()
 		mbHandle.wkeSetTransparent(v.handle, false)
@@ -109,12 +121,17 @@ func (v *BlinkView) wkePopupDialogAndDownload(param uintptr, contentLength uint3
 		disposition, uintptr(job), data, uintptr(unsafe.Pointer(callback)))
 	return wkeDownloadOpt(r)
 }
+func (v *BlinkView) wkeDownloadByPath(param, path uintptr, contentLength uint32, url, mime,
+	disposition uintptr, job wkeNetJob, data uintptr, callback *wkeDownloadBind) wkeDownloadOpt {
+	r, _, _ := mbHandle._wkeDownloadByPath.Call(uintptr(v.handle), param, path, uintptr(contentLength), url, mime,
+		disposition, uintptr(job), data, uintptr(unsafe.Pointer(callback)))
+	return wkeDownloadOpt(r)
+}
 
 func (v *BlinkView) runJs(frame wkeFrame, js string) {
 	if len(js) == 0 {
 		return
 	}
-	fmt.Println("run script")
 	mbHandle.wkeRunJs(v.handle, frame, strToCharPtr(js), false, nil, 0, 0)
 	return
 }

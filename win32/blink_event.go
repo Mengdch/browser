@@ -1,7 +1,8 @@
 package win32
 
 import (
-	"strconv"
+	"encoding/base64"
+	"fmt"
 	"unsafe"
 )
 
