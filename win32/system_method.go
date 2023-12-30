@@ -45,3 +45,7 @@ func (w *Window) ShowMessageBox(title, msg string) {
 	win.MessageBox(0, content, windows.StringToUTF16Ptr(title), win.MB_ICONINFORMATION|win.MB_OK)
 	return
 }
+// view setWidth move setSize hide
+func (v *BlinkView) Move(left, top, width, height int32) {
+	win.MoveWindow(v.mWnd, left, top, width, height, true)
+}
