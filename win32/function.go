@@ -82,6 +82,7 @@ type Thublink struct {
 	_wkeGoBack                         *windows.LazyProc
 	_wkeGoForward                      *windows.LazyProc
 	_wkeCanGoForward                   *windows.LazyProc
+	_wkeGetTitle                       *windows.LazyProc
 }
 
 const (
@@ -163,6 +164,7 @@ func (t *Thublink) Init() *Thublink {
 	t._wkeGoBack = lib.NewProc("mbGoBack")
 	t._wkeGoForward = lib.NewProc("mbGoForward")
 	t._wkeCanGoForward = lib.NewProc("mbCanGoForward")
+	t._wkeGetTitle = lib.NewProc("mbGetTitle")
 	var set mbSettings
 	set.mask = MB_ENABLE_NODEJS
 	r, _, err := t._wkeInitialize.Call(uintptr(unsafe.Pointer(&set)))
@@ -532,8 +534,12 @@ func (t *Thublink) wkeGoForward(wke wkeHandle) {
 	return
 }
 func (t *Thublink) wkeCanGoForward(wke wkeHandle, callback wkeCanGoBackForwardCallback, param uintptr) {
-	t._wkeGoForward.Call(uintptr(wke), syscall.NewCallback(callback), param)
+	t._wkeCanGoForward.Call(uintptr(wke), syscall.NewCallback(callback), param)
 	return
+}
+func (t *Thublink) wkeGetTitle(wke wkeHandle) uintptr {
+	r, _, _ := t._wkeGetTitle.Call(uintptr(wke))
+	return r
 }
 func strToCharPtr(str string) uintptr {
 	buf := []byte(str)

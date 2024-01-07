@@ -17,6 +17,10 @@ func (v *BlinkView) GetViewURL() string {
 	u := mbHandle.wkeGetUrl(v.handle)
 	return ptrToUtf8(u)
 }
+func (v *BlinkView) GetTitle() string {
+	u := mbHandle.wkeGetTitle(v.handle)
+	return ptrToUtf8(u)
+}
 
 func (v *BlinkView) ViewStop() {
 	mbHandle.wkeStopLoading(v.handle)
